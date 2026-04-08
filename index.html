@@ -1,1393 +1,1934 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>SAT Tutor — 7-Day Grind</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SAT Grind — Beat the Clock</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
-  /* ============================================================
-     PASTE YOUR FIREBASE CONFIG BELOW (Step 1 of setup)
-     ============================================================ */
-  :root {
-    --bg: #0a0a0a;
-    --card: #141414;
-    --border: #222;
-    --accent: #3b82f6;
-    --accent-dim: #1e3a5f;
-    --text: #ffffff;
-    --muted: #aaaaaa;
-    --danger: #ef4444;
-    --success: #22c55e;
-    --warn: #f59e0b;
-    --ai-bubble: #1a1a1a;
-    --user-bubble: #1e3a5f;
-    --font: 'Courier New', 'Lucida Console', monospace;
-    --font-ui: system-ui, -apple-system, sans-serif;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0f1e;
+  --bg2: #0f172a;
+  --surface: #141e35;
+  --surface2: #1e293b;
+  --border: #1e3a5f;
+  --accent: #2563eb;
+  --accent-bright: #3b82f6;
+  --accent-glow: rgba(59,130,246,0.18);
+  --correct: #16a34a;
+  --correct-light: #22c55e;
+  --wrong: #dc2626;
+  --wrong-light: #ef4444;
+  --warning: #d97706;
+  --warning-light: #f59e0b;
+  --text: #e2e8f0;
+  --text-bright: #f8fafc;
+  --muted: #64748b;
+  --muted2: #94a3b8;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
 
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-ui);
-    min-height: 100vh;
-    overscroll-behavior: none;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  /* ── SCREENS ── */
-  .screen { display: none; min-height: 100vh; }
-  .screen.active { display: flex; flex-direction: column; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', system-ui, sans-serif;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
 
-  /* ── TYPOGRAPHY ── */
-  h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
-  h2 { font-size: 1.25rem; font-weight: 700; }
-  h3 { font-size: 1rem; font-weight: 600; }
-  p  { line-height: 1.6; }
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  /* ── BUTTONS ── */
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 0.75rem 1.5rem; border-radius: 6px; border: none;
-    font-size: 0.95rem; font-weight: 600; cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
-    font-family: var(--font-ui);
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
-  .btn-danger { background: var(--danger); color: #fff; }
-  .btn-full { width: 100%; }
+/* LAYOUT WRAPPER */
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+}
 
-  /* ── CARDS ── */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1rem;
-  }
+/* SCREENS */
+.screen {
+  display: none;
+  min-height: 100vh;
+  padding: 0 0 80px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.screen.active {
+  display: block;
+  opacity: 1;
+}
+.screen-pad { padding: 16px; }
 
-  /* ── INPUT ── */
-  .input {
-    width: 100%; background: #111; border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; padding: 0.75rem 1rem;
-    font-size: 1rem; font-family: var(--font-ui); outline: none;
-    transition: border-color 0.15s;
-  }
-  .input:focus { border-color: var(--accent); }
-  textarea.input { resize: vertical; min-height: 80px; }
+/* ─── LOADING OVERLAY ─── */
+#loading-overlay {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999; gap: 16px;
+}
+#loading-overlay.hidden { display: none; }
+.logo-big {
+  font-size: 2.4rem; font-weight: 800; letter-spacing: -1px;
+  color: var(--text-bright);
+}
+.logo-big span { color: var(--accent-bright); }
+.loading-sub { color: var(--muted2); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-bright);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── HEADER ── */
-  .app-header {
-    background: var(--card); border-bottom: 1px solid var(--border);
-    padding: 0.85rem 1rem; display: flex; align-items: center;
-    justify-content: space-between; position: sticky; top: 0; z-index: 100;
-  }
-  .app-header .logo { font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
-  .app-header .user-info { display: flex; align-items: center; gap: 0.5rem; }
-  .avatar {
-    width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
-    border: 1px solid var(--border);
-  }
-  .avatar-fallback {
-    width: 30px; height: 30px; border-radius: 50%; background: var(--accent-dim);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; font-weight: 700; color: var(--accent); border: 1px solid var(--border);
-  }
+/* ─── SETUP SCREEN ─── */
+#setup-screen {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+  flex-direction: column;
+  gap: 20px;
+}
+#setup-screen.active { display: flex; opacity: 1; }
 
-  /* ── SETUP SCREEN ── */
-  #screen-setup {
-    align-items: center; justify-content: center; padding: 2rem 1rem;
-  }
-  .setup-box {
-    width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 1.25rem;
-  }
-  .setup-box .logo-big {
-    font-size: 2rem; font-weight: 700; color: var(--accent);
-    letter-spacing: 2px; text-align: center;
-  }
-  .setup-box .tagline { text-align: center; color: var(--muted); font-size: 0.9rem; }
-  .label { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; display: block; }
-  .google-btn {
-    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-    background: #fff; color: #111; border: none; border-radius: 6px;
-    padding: 0.85rem 1.5rem; font-size: 0.95rem; font-weight: 600;
-    cursor: pointer; width: 100%; transition: opacity 0.15s;
-  }
-  .google-btn:hover { opacity: 0.9; }
-  .google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
-  .divider { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); font-size: 0.8rem; }
-  .divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+.setup-header { text-align: center; }
+.setup-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+.setup-header h1 span { color: var(--accent-bright); }
+.setup-header p { color: var(--muted2); margin-top: 6px; font-size: 0.9rem; }
 
-  /* ── DASHBOARD ── */
-  #screen-dashboard { padding: 0; }
-  .dashboard-body { padding: 1rem; flex: 1; overflow-y: auto; }
-  .day-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-  }
-  .day-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 10px; padding: 1rem; position: relative;
-    transition: border-color 0.2s, transform 0.15s;
-    min-height: 110px; display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .day-card.active-day { border-color: var(--accent); cursor: pointer; }
-  .day-card.active-day:hover { transform: translateY(-2px); border-color: #60a5fa; }
-  .day-card.completed { border-color: var(--success); opacity: 0.85; cursor: pointer; }
-  .day-card.locked { opacity: 0.4; cursor: not-allowed; }
-  .day-num { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-  .day-topic { font-size: 0.85rem; font-weight: 600; margin-top: 0.25rem; line-height: 1.3; }
-  .day-status {
-    font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600;
-  }
-  .day-status.done { color: var(--success); }
-  .day-status.now  { color: var(--accent); }
-  .day-status.lock { color: var(--muted); }
-  .active-dot {
-    position: absolute; top: 0.75rem; right: 0.75rem;
-    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.4); } }
+.setup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-  .stats-row {
-    display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;
-  }
-  .stat-box {
-    flex: 1; min-width: 100px; background: var(--card); border: 1px solid var(--border);
-    border-radius: 8px; padding: 0.75rem; text-align: center;
-  }
-  .stat-val { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-  .stat-lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.15rem; }
+.field-group { display: flex; flex-direction: column; gap: 6px; }
+.field-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.08em; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-  .progress-bar-wrap { margin-bottom: 1.25rem; }
-  .progress-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
-  .progress-bar { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s; }
+input[type=text], input[type=number], input[type=date], input[type=password], textarea {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-bright);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus { border-color: var(--accent-bright); }
+textarea { resize: vertical; min-height: 90px; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
 
-  /* time tracker */
-  .time-tracker {
-    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-    padding: 0.75rem 1rem; margin-bottom: 1.25rem;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
-  }
-  .time-tracker .tt-label { font-size: 0.8rem; color: var(--muted); }
-  .time-tracker .tt-val { font-size: 1rem; font-weight: 700; color: var(--accent); font-family: var(--font); }
-  .time-quota-bar { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 0.4rem; flex-basis: 100%; }
-  .time-quota-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
 
-  /* ── HABITS SCREEN ── */
-  #screen-habits {
-    align-items: center; justify-content: center; padding: 1.5rem 1rem;
-  }
-  .habits-box { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 1.25rem; }
-  .habit-item {
-    display: flex; align-items: flex-start; gap: 0.85rem;
-    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-    padding: 1rem; cursor: pointer; transition: border-color 0.2s;
-  }
-  .habit-item.checked { border-color: var(--success); }
-  .habit-check {
-    width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 4px;
-    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s, border-color 0.2s; margin-top: 1px;
-  }
-  .habit-item.checked .habit-check { background: var(--success); border-color: var(--success); }
-  .habit-text { font-size: 0.95rem; line-height: 1.5; }
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 13px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+.btn-primary:hover { background: var(--accent-bright); box-shadow: 0 0 30px rgba(59,130,246,0.3); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--accent-bright); color: var(--text); }
+.btn-correct { background: var(--correct); color: #fff; }
+.btn-wrong { background: var(--wrong); color: #fff; }
+.btn-sm { padding: 8px 14px; font-size: 0.85rem; width: auto; }
 
-  /* ── SESSION SCREEN ── */
-  #screen-session { padding: 0; }
-  .session-header {
-    background: var(--card); border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-  }
-  .session-meta { flex: 1; }
-  .session-day { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; }
-  .session-topic { font-size: 0.9rem; font-weight: 700; }
-  .session-counters { display: flex; gap: 0.75rem; align-items: center; }
-  .q-counter { font-size: 0.8rem; color: var(--muted); }
-  .q-score { font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+#setup-error {
+  background: rgba(220,38,38,0.12);
+  border: 1px solid var(--wrong);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #fca5a5;
+  display: none;
+}
 
-  /* timer */
-  .timer-display {
-    font-family: var(--font); font-size: 1.1rem; font-weight: 700;
-    color: var(--accent); min-width: 42px; text-align: right;
-    transition: color 0.3s;
-  }
-  .timer-display.danger { color: var(--danger); animation: blink 0.7s infinite; }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+/* ─── TAB BAR ─── */
+#tab-bar {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  height: 60px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: none;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+}
+#tab-bar.visible { display: flex; }
+.tab-btn {
+  flex: 1; height: 100%;
+  background: none; border: none;
+  color: var(--muted);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.68rem; font-weight: 600;
+  transition: color 0.15s;
+}
+.tab-btn svg { width: 20px; height: 20px; }
+.tab-btn.active { color: var(--accent-bright); }
 
-  .chat-area {
-    flex: 1; overflow-y: auto; padding: 1rem;
-    display: flex; flex-direction: column; gap: 0.75rem;
-    scroll-behavior: smooth;
-  }
-  .bubble {
-    max-width: 88%; padding: 0.85rem 1rem; border-radius: 10px;
-    font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .bubble.ai { background: var(--ai-bubble); border: 1px solid var(--border); align-self: flex-start; }
-  .bubble.user { background: var(--user-bubble); align-self: flex-end; }
-  .bubble.error {
-    background: #2a0a0a; border: 1px solid var(--danger); color: var(--danger);
-    align-self: flex-start; cursor: pointer;
-  }
-  .bubble.system {
-    background: transparent; border: 1px dashed var(--border); color: var(--muted);
-    font-size: 0.8rem; align-self: center; text-align: center;
-  }
-  .typing-dots { display: flex; gap: 4px; padding: 0.3rem 0; }
-  .typing-dots span {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
-    animation: dot-bounce 1.2s infinite;
-  }
-  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes dot-bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+/* ─── HOME SCREEN ─── */
+.home-top {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--bg2) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 16px 16px;
+}
+.home-top-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 16px;
+}
+.logo-sm { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+.logo-sm span { color: var(--accent-bright); }
+.streak-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(217,119,6,0.15);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.82rem; font-weight: 700;
+  color: var(--warning-light);
+}
+.countdown-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--muted2);
+  margin-bottom: 12px;
+}
+.countdown-text strong { color: var(--warning-light); }
 
-  .input-area {
-    background: var(--card); border-top: 1px solid var(--border);
-    padding: 0.75rem 1rem; display: flex; gap: 0.5rem; align-items: flex-end;
-  }
-  .input-area textarea {
-    flex: 1; min-height: 44px; max-height: 140px; resize: none;
-  }
-  .send-btn {
-    background: var(--accent); border: none; color: #fff;
-    width: 44px; height: 44px; border-radius: 6px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: opacity 0.15s;
-  }
-  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .send-btn:not(:disabled):hover { opacity: 0.85; }
+.progress-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.78rem;
+}
+.score-label { font-family: 'JetBrains Mono', monospace; color: var(--muted2); white-space: nowrap; }
+.progress-track {
+  flex: 1; height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
 
-  /* pace warning */
-  .pace-warn {
-    background: #1a1200; border: 1px solid var(--warn); border-radius: 6px;
-    padding: 0.5rem 0.85rem; font-size: 0.75rem; color: var(--warn);
-    text-align: center; margin: 0 1rem;
-  }
+.home-content { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
-  /* ── SUMMARY SCREEN ── */
-  #screen-summary { padding: 0; }
-  .summary-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-  .score-card {
-    background: var(--card); border: 1px solid var(--accent); border-radius: 10px;
-    padding: 1.5rem; text-align: center;
-  }
-  .score-big { font-size: 3.5rem; font-weight: 700; color: var(--accent); font-family: var(--font); }
-  .score-sub { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
-  .streak-badge {
-    background: #1a2a0a; border: 1px solid var(--success); border-radius: 8px;
-    padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.75rem;
-  }
-  .streak-icon { font-size: 1.5rem; }
-  .streak-info .val { font-size: 1.25rem; font-weight: 700; color: var(--success); }
-  .streak-info .lbl { font-size: 0.75rem; color: var(--muted); }
-  .locked-rule {
-    background: #0a0a1a; border: 1px solid var(--accent); border-radius: 8px;
-    padding: 1rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); line-height: 1.5;
-  }
-  .locked-rule-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 0.4rem; }
-  .cheat-sheet-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;
-  }
-  .cheat-sheet-card h3 { margin-bottom: 0.75rem; color: var(--accent); }
-  .cheat-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
-  .cheat-list li {
-    padding: 0.6rem 0.75rem; background: #111; border-radius: 6px;
-    font-size: 0.85rem; line-height: 1.4; border-left: 3px solid var(--accent);
-  }
-  .copy-btn { margin-top: 0.75rem; }
+.mission-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.mission-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright), transparent);
+}
+.mission-label {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent-bright);
+  margin-bottom: 8px;
+}
+.mission-title {
+  font-size: 1.25rem; font-weight: 800; color: var(--text-bright);
+  line-height: 1.2; margin-bottom: 4px;
+}
+.mission-sub {
+  font-size: 0.82rem; color: var(--muted2);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 14px;
+}
+.pep-talk {
+  background: var(--bg2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: var(--muted2);
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.start-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 15px;
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem; font-weight: 800;
+  width: 100%;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.15s;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.35);
+}
+.start-btn:hover { background: var(--accent-bright); box-shadow: 0 4px 28px rgba(59,130,246,0.45); }
+.start-btn:active { transform: scale(0.98); }
 
-  /* ── CHEAT HISTORY ── */
-  #screen-cheats { padding: 0; }
-  .cheats-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.quick-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.stat-mini {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+.stat-mini-val { font-size: 1.5rem; font-weight: 800; color: var(--text-bright); }
+.stat-mini-label { font-size: 0.72rem; color: var(--muted2); margin-top: 2px; }
 
-  /* ── TOAST ── */
-  #toast {
-    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-    background: #222; border: 1px solid var(--border); color: var(--text);
-    padding: 0.6rem 1.25rem; border-radius: 20px; font-size: 0.85rem;
-    z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none;
-    white-space: nowrap; max-width: 90vw;
-  }
-  #toast.show { opacity: 1; }
+/* ─── PRACTICE SESSION ─── */
+.session-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: sticky; top: 0; z-index: 10;
+}
+.session-progress-text {
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted2);
+  white-space: nowrap;
+}
+.session-topic {
+  font-size: 0.8rem; font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diff-pill {
+  font-size: 0.68rem; font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.diff-easy { background: rgba(34,197,94,0.15); color: var(--correct-light); }
+.diff-medium { background: rgba(245,158,11,0.15); color: var(--warning-light); }
+.diff-hard { background: rgba(239,68,68,0.15); color: var(--wrong-light); }
 
-  /* ── LOADING OVERLAY ── */
-  #loading {
-    position: fixed; inset: 0; background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 99999; flex-direction: column; gap: 1rem;
-  }
-  .spinner {
-    width: 36px; height: 36px; border: 3px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading p { color: var(--muted); font-size: 0.85rem; }
+.session-progress-bar {
+  height: 3px;
+  background: var(--border);
+}
+.session-progress-fill {
+  height: 100%;
+  background: var(--accent-bright);
+  transition: width 0.3s ease;
+}
 
-  /* ── SETTINGS PANEL ── */
-  #settings-panel {
-    position: fixed; top: 0; right: -320px; width: 300px; max-width: 90vw;
-    height: 100vh; background: var(--card); border-left: 1px solid var(--border);
-    z-index: 999; padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 1rem;
-    transition: right 0.3s ease;
-  }
-  #settings-panel.open { right: 0; }
-  .settings-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    z-index: 998; display: none;
-  }
-  .settings-overlay.show { display: block; }
+.question-area { padding: 16px; }
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.review-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.7rem; font-weight: 700;
+  color: var(--warning-light);
+  margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.question-text {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-bright);
+  font-weight: 500;
+}
+.question-img {
+  width: 100%; border-radius: var(--radius-sm);
+  margin-top: 12px; border: 1px solid var(--border);
+}
 
-  /* misc */
-  .section-label {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--muted); margin-bottom: 0.5rem;
-  }
-  .flex-row { display: flex; gap: 0.75rem; align-items: center; }
-  .flex-col { display: flex; flex-direction: column; gap: 0.75rem; }
-  .text-muted { color: var(--muted); font-size: 0.85rem; }
-  .text-accent { color: var(--accent); }
-  .text-danger { color: var(--danger); }
-  .text-success { color: var(--success); }
-  .mt-1 { margin-top: 0.5rem; }
-  .text-center { text-align: center; }
+.choices { display: flex; flex-direction: column; gap: 10px; }
+.choice-btn {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  text-align: left;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  min-height: 52px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: all 0.15s;
+  line-height: 1.45;
+  width: 100%;
+}
+.choice-btn:hover:not(:disabled) { border-color: var(--accent-bright); background: var(--surface); }
+.choice-letter {
+  font-weight: 800; font-size: 0.8rem;
+  min-width: 20px; padding-top: 1px;
+  color: var(--muted2);
+}
+.choice-btn.correct-answer {
+  border-color: var(--correct-light);
+  background: rgba(22,163,74,0.12);
+  color: var(--text-bright);
+}
+.choice-btn.correct-answer .choice-letter { color: var(--correct-light); }
+.choice-btn.wrong-answer {
+  border-color: var(--wrong-light);
+  background: rgba(220,38,38,0.12);
+  color: var(--text-bright);
+}
+.choice-btn.wrong-answer .choice-letter { color: var(--wrong-light); }
+.choice-btn.flash-correct { animation: flashCorrect 0.35s ease; }
+.choice-btn.flash-wrong { animation: flashWrong 0.35s ease; }
+@keyframes flashCorrect {
+  0% { background: var(--surface2); }
+  50% { background: rgba(34,197,94,0.35); border-color: var(--correct-light); }
+  100% { border-color: var(--correct-light); background: rgba(22,163,74,0.12); }
+}
+@keyframes flashWrong {
+  0% { background: var(--surface2); }
+  50% { background: rgba(239,68,68,0.35); border-color: var(--wrong-light); }
+  100% { border-color: var(--wrong-light); background: rgba(220,38,38,0.12); }
+}
 
-  /* ── Responsive ── */
-  @media (max-width: 400px) {
-    .day-grid { grid-template-columns: repeat(2, 1fr); }
-    .score-big { font-size: 2.8rem; }
-  }
-  @media (min-width: 700px) {
-    #screen-setup, #screen-habits, #screen-summary .summary-body {
-      max-width: 560px; margin: 0 auto; width: 100%;
-    }
-    #screen-summary { align-items: center; }
-    .chat-area { max-width: 700px; margin: 0 auto; width: 100%; }
-    .input-area { max-width: 700px; margin: 0 auto; width: 100%; }
-    .input-area { border-radius: 0; }
-  }
+.explanation-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-top: 14px;
+  display: none;
+}
+.explanation-card.visible { display: block; animation: slideUp 0.2s ease; }
+@keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.explanation-label {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--wrong-light); margin-bottom: 10px;
+}
+.explanation-text {
+  font-size: 0.9rem; line-height: 1.6; color: var(--muted2);
+}
+.explanation-loading {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--muted2); font-size: 0.88rem;
+}
+.next-btn {
+  margin-top: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem; font-weight: 700;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.next-btn:hover { background: var(--surface); border-color: var(--accent-bright); }
+
+/* ─── RESULTS OVERLAY ─── */
+#results-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(10,15,30,0.95);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#results-overlay.visible { display: flex; }
+.results-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.results-score-big {
+  font-size: 4rem; font-weight: 800;
+  color: var(--text-bright); line-height: 1;
+  margin-bottom: 4px;
+}
+.results-score-big span { color: var(--accent-bright); }
+.results-label { font-size: 0.85rem; color: var(--muted2); margin-bottom: 20px; }
+.results-stat-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 0; border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.results-stat-row .label { color: var(--muted2); }
+.results-stat-row .val { font-weight: 700; color: var(--text-bright); }
+.strategy-tip {
+  background: var(--bg2);
+  border-left: 3px solid var(--warning-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 14px;
+  font-size: 0.84rem; color: var(--muted2);
+  line-height: 1.5;
+  text-align: left;
+  margin: 16px 0;
+}
+.strategy-tip strong { color: var(--warning-light); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 4px; }
+
+/* ─── STATS SCREEN ─── */
+.screen-title {
+  padding: 18px 16px 10px;
+  font-size: 1.3rem; font-weight: 800;
+  color: var(--text-bright);
+}
+.screen-title span { color: var(--muted2); font-size: 0.9rem; font-weight: 400; margin-left: 8px; }
+
+.topic-grid {
+  padding: 0 16px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.topic-tile {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.topic-tile:hover { border-color: var(--accent-bright); transform: translateY(-1px); }
+.topic-tile.red { border-color: rgba(239,68,68,0.4); background: rgba(220,38,38,0.06); }
+.topic-tile.yellow { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.06); }
+.topic-tile.green { border-color: rgba(34,197,94,0.4); background: rgba(22,163,74,0.06); }
+.topic-tile.no-data { opacity: 0.5; }
+.topic-acc {
+  font-size: 1.6rem; font-weight: 800;
+  line-height: 1;
+}
+.topic-tile.red .topic-acc { color: var(--wrong-light); }
+.topic-tile.yellow .topic-acc { color: var(--warning-light); }
+.topic-tile.green .topic-acc { color: var(--correct-light); }
+.topic-tile.no-data .topic-acc { color: var(--muted); }
+.topic-name { font-size: 0.78rem; font-weight: 700; color: var(--text); margin: 4px 0 2px; line-height: 1.3; }
+.topic-tries { font-size: 0.7rem; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+
+.section-header-stats {
+  padding: 6px 16px 4px;
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+/* ─── DRILL HEADER ─── */
+.drill-header-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.back-btn {
+  background: none; border: none;
+  color: var(--muted2); cursor: pointer;
+  font-size: 1.2rem; padding: 4px;
+  display: flex; align-items: center;
+}
+.drill-title { font-size: 1rem; font-weight: 700; color: var(--text-bright); }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 76px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 0.84rem;
+  color: var(--text);
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 300;
+  white-space: nowrap;
+  max-width: calc(100% - 32px);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* USER BAR */
+.user-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--border);
+  object-fit: cover;
+}
+.user-name { font-size: 0.78rem; color: var(--muted2); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* GOOGLE SIGN IN */
+#google-signin-screen {
+  display: none;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 24px;
+  gap: 20px;
+  text-align: center;
+}
+#google-signin-screen.active { display: flex; opacity: 1; }
+.signin-logo { font-size: 3rem; font-weight: 800; letter-spacing: -2px; color: var(--text-bright); }
+.signin-logo span { color: var(--accent-bright); }
+.signin-tagline { font-size: 1.1rem; color: var(--muted2); line-height: 1.4; max-width: 280px; }
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: #fff; color: #1a1a1a;
+  border: none; border-radius: var(--radius-sm);
+  padding: 13px 24px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem; font-weight: 700;
+  cursor: pointer;
+  width: 100%; max-width: 300px;
+  transition: all 0.15s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.google-btn:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.4); transform: translateY(-1px); }
+.google-icon { width: 20px; height: 20px; }
+
+/* SETUP SMALL (for returning users after sign-in if no profile) */
+.onboarding-step-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent-bright);
+  margin-bottom: 4px;
+}
+
+/* NO-DATA PLACEHOLDER */
+.empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted2);
+}
+.empty-state svg { width: 48px; height: 48px; opacity: 0.3; margin-bottom: 12px; }
+.empty-state p { font-size: 0.9rem; line-height: 1.5; }
+
+/* KaTeX overrides */
+.katex { font-size: 1em !important; color: var(--text-bright); }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+/* RESPONSIVE */
+@media (max-width: 375px) {
+  .question-text { font-size: 0.92rem; }
+  .choice-btn { font-size: 0.88rem; padding: 12px 14px; }
+}
 </style>
 </head>
 <body>
+<div id="app">
 
-<!-- LOADING -->
-<div id="loading">
-  <div class="spinner"></div>
-  <p>Loading...</p>
-</div>
-
-<!-- TOAST -->
-<div id="toast"></div>
-
-<!-- SETTINGS OVERLAY -->
-<div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
-
-<!-- SETTINGS PANEL -->
-<div id="settings-panel">
-  <div style="display:flex;align-items:center;justify-content:space-between;">
-    <h2>Settings</h2>
-    <button class="btn btn-ghost" style="padding:0.4rem 0.75rem;" onclick="closeSettings()">✕</button>
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay">
+    <div class="logo-big">SAT<span>Grind</span></div>
+    <div class="spinner"></div>
+    <div class="loading-sub" id="loading-sub-text">Initializing...</div>
   </div>
-  <div>
-    <div class="section-label">Groq API Key</div>
-    <input class="input" type="password" id="settings-key-input" placeholder="gsk_..."/>
-    <button class="btn btn-primary btn-full mt-1" onclick="saveKeyFromSettings()">Save Key</button>
-  </div>
-  <div>
-    <div class="section-label">Daily Study Quota</div>
-    <input class="input" type="number" id="settings-quota-input" placeholder="Minutes (default 45)" min="10" max="240"/>
-    <button class="btn btn-ghost btn-full mt-1" onclick="saveQuotaFromSettings()">Save Quota</button>
-  </div>
-  <div>
-    <div class="section-label">Account</div>
-    <button class="btn btn-ghost btn-full" onclick="signOutUser()">Sign Out</button>
-  </div>
-  <div style="margin-top:auto;">
-    <p class="text-muted" style="font-size:0.75rem;">Data synced to Firebase under your Google account.</p>
-  </div>
-</div>
 
-<!-- ════════════════════════════════════════════
-     SCREEN 0 — SETUP (API key entry)
-════════════════════════════════════════════ -->
-<div id="screen-setup" class="screen">
-  <div class="setup-box">
-    <div class="logo-big">SAT//GRIND</div>
-    <p class="tagline">1000 → 1300. 7 days. No excuses.</p>
-    <div class="card">
-      <button class="google-btn" id="google-signin-btn" onclick="signInWithGoogle()">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        Sign in with Google
-      </button>
-    </div>
-    <div class="divider">then enter your Groq key</div>
-    <div>
-      <label class="label" for="groq-key-input">Groq API Key</label>
-      <input class="input" type="password" id="groq-key-input" placeholder="gsk_..."/>
-    </div>
-    <button class="btn btn-primary btn-full" id="start-btn" onclick="saveGroqKey()">Save & Continue</button>
-    <p class="text-muted text-center" style="font-size:0.75rem;">
-      Get a free key at <span style="color:var(--accent);">console.groq.com</span>
-    </p>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════
-     SCREEN 1 — DASHBOARD
-════════════════════════════════════════════ -->
-<div id="screen-dashboard" class="screen">
-  <div class="app-header">
-    <span class="logo">SAT//GRIND</span>
-    <div class="user-info">
-      <div id="header-avatar"></div>
-      <button class="btn btn-ghost" style="padding:0.4rem 0.7rem; font-size:0.8rem;" onclick="openSettings()">⚙</button>
-    </div>
-  </div>
-  <div class="dashboard-body">
-    <!-- Time tracker -->
-    <div class="time-tracker" id="time-tracker-widget">
-      <div>
-        <div class="tt-label">Today's Study Time</div>
-        <div class="tt-val" id="today-time-display">0:00</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="tt-label">Quota</div>
-        <div class="tt-val" id="quota-display">45 min</div>
-      </div>
-      <div class="time-quota-bar">
-        <div class="time-quota-fill" id="time-quota-fill" style="width:0%;background:var(--accent);"></div>
-      </div>
-      <div class="tt-label" id="rollover-label" style="flex-basis:100%;"></div>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-box">
-        <div class="stat-val" id="dash-streak">0</div>
-        <div class="stat-lbl">Day Streak</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="dash-score">0</div>
-        <div class="stat-lbl">Total Correct</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="dash-days">0/7</div>
-        <div class="stat-lbl">Days Done</div>
-      </div>
-    </div>
-
-    <!-- Progress -->
-    <div class="progress-bar-wrap">
-      <div class="progress-label">
-        <span>Overall Progress</span>
-        <span id="progress-pct">0%</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-      </div>
-    </div>
-
-    <!-- Day grid -->
-    <div class="section-label">Your 7-Day Plan</div>
-    <div class="day-grid" id="day-grid"></div>
-
-    <!-- Past cheat sheets -->
-    <button class="btn btn-ghost btn-full" onclick="showScreen('screen-cheats')">Past Cheat Sheets</button>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════
-     SCREEN 2 — HABITS
-════════════════════════════════════════════ -->
-<div id="screen-habits" class="screen">
-  <div style="padding:1.5rem 1rem 0.5rem;">
-    <button class="btn btn-ghost" onclick="showScreen('screen-dashboard')" style="padding:0.4rem 0.75rem; font-size:0.85rem;">← Back</button>
-  </div>
-  <div class="habits-box" style="flex:1;justify-content:center;padding:1rem;margin:0 auto;width:100%;max-width:460px;">
-    <h1>Before You Begin</h1>
-    <p class="text-muted">Confirm all three before continuing. Every time.</p>
-
-    <div class="habit-item" id="h1" onclick="toggleHabit('h1')">
-      <div class="habit-check" id="h1-check">
-        <svg id="h1-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:none;">
-          <path d="M2 7l4 4 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="habit-text">I will pause <strong>5 seconds</strong> before every answer.</div>
-    </div>
-
-    <div class="habit-item" id="h2" onclick="toggleHabit('h2')">
-      <div class="habit-check" id="h2-check">
-        <svg id="h2-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:none;">
-          <path d="M2 7l4 4 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="habit-text">I will write <strong>scratch work</strong> — never solve in my head.</div>
-    </div>
-
-    <div class="habit-item" id="h3" onclick="toggleHabit('h3')">
-      <div class="habit-check" id="h3-check">
-        <svg id="h3-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:none;">
-          <path d="M2 7l4 4 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="habit-text">I will <strong>eliminate wrong answers</strong> before committing.</div>
-    </div>
-
-    <button class="btn btn-primary btn-full" id="ready-btn" disabled onclick="startSession()">
-      I'm ready, let's go →
+  <!-- GOOGLE SIGN IN SCREEN -->
+  <div id="google-signin-screen" class="screen">
+    <div class="signin-logo">SAT<span>Grind</span></div>
+    <div class="signin-tagline">Your personalized SAT coach. Sign in to save your progress.</div>
+    <button class="google-btn" id="google-signin-btn">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
     </button>
+    <div id="signin-error" style="color:#fca5a5;font-size:0.82rem;display:none;"></div>
   </div>
-</div>
 
-<!-- ════════════════════════════════════════════
-     SCREEN 3 — SESSION
-════════════════════════════════════════════ -->
-<div id="screen-session" class="screen">
-  <div class="session-header">
-    <div class="session-meta">
-      <div class="session-day" id="session-day-label">Day 1</div>
-      <div class="session-topic" id="session-topic-label">Algebra & Equations</div>
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen" class="screen">
+    <div class="setup-header">
+      <h1>SAT<span>Grind</span></h1>
+      <p>Let's calibrate your battle plan.</p>
     </div>
-    <div class="session-counters">
-      <span class="q-counter" id="q-counter">Q 0/10</span>
-      <span class="q-score" id="q-score">0 ✓</span>
-      <span class="timer-display" id="timer-display" style="display:none;">1:15</span>
+    <div class="setup-card">
+      <div class="onboarding-step-label">Your Goal</div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Current Score</label>
+          <input type="number" id="setup-current" value="1040" min="400" max="1600">
+        </div>
+        <div class="field-group">
+          <label>Target Score</label>
+          <input type="number" id="setup-target" value="1340" min="400" max="1600">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Test Date</label>
+        <input type="date" id="setup-date">
+      </div>
+      <hr class="divider">
+      <div class="onboarding-step-label">Your Groq API Key</div>
+      <div class="field-group">
+        <label>Groq Key (for AI explanations)</label>
+        <input type="password" id="setup-groq" placeholder="gsk_...">
+      </div>
+      <div id="setup-error"></div>
+      <button class="btn btn-primary" id="setup-submit-btn">⚡ Start My Journey</button>
     </div>
   </div>
-  <div id="pace-warn" class="pace-warn" style="display:none;">SAT pace: 75 seconds per question.</div>
-  <div class="chat-area" id="chat-area"></div>
-  <div class="input-area">
-    <textarea class="input" id="answer-input" placeholder="Type your answer..." rows="1"
-      onkeydown="handleInputKey(event)"></textarea>
-    <button class="send-btn" id="send-btn" onclick="submitAnswer()" disabled>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-    </button>
-  </div>
-</div>
 
-<!-- ════════════════════════════════════════════
-     SCREEN 4 — SUMMARY
-════════════════════════════════════════════ -->
-<div id="screen-summary" class="screen">
-  <div class="app-header">
-    <span class="logo">Session Complete</span>
-  </div>
-  <div class="summary-body">
-    <div class="score-card">
-      <div class="score-big" id="sum-score">0/10</div>
-      <div class="score-sub" id="sum-day-label">Day 1 — Algebra & Equations</div>
-    </div>
-    <div class="streak-badge">
-      <div class="streak-icon">🔥</div>
-      <div class="streak-info">
-        <div class="val" id="sum-streak">1</div>
-        <div class="lbl">Day Streak</div>
+  <!-- HOME SCREEN -->
+  <div id="home-screen" class="screen">
+    <div class="home-top">
+      <div class="home-top-row">
+        <div class="user-bar">
+          <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none">
+          <span class="user-name" id="user-name-display"></span>
+        </div>
+        <div class="logo-sm">SAT<span>Grind</span></div>
+        <div class="streak-badge">🔥 <span id="streak-count">0</span></div>
+      </div>
+      <div class="countdown-text">⚡ <strong id="days-left">0</strong> days until your SAT</div>
+      <div class="progress-row">
+        <span class="score-label" id="score-from">1040</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="score-progress" style="width:0%"></div>
+        </div>
+        <span class="score-label" id="score-to">1340</span>
       </div>
     </div>
-    <div class="locked-rule">
-      <div class="locked-rule-label">Locked Rule</div>
-      <div id="sum-locked-rule">—</div>
+    <div class="home-content">
+      <div class="mission-card">
+        <div class="mission-label">Today's Mission</div>
+        <div class="mission-title" id="mission-title">Loading...</div>
+        <div class="mission-sub" id="mission-sub">12 questions · ~18 min</div>
+        <div class="pep-talk" id="pep-talk-text">Calculating your battle plan...</div>
+        <button class="start-btn" id="start-session-btn">▶ START SESSION</button>
+      </div>
+      <div class="quick-stats">
+        <div class="stat-mini">
+          <div class="stat-mini-val" id="stat-total-q">0</div>
+          <div class="stat-mini-label">Questions Practiced</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-val" id="stat-accuracy">—</div>
+          <div class="stat-mini-label">Overall Accuracy</div>
+        </div>
+      </div>
     </div>
-    <div class="cheat-sheet-card" id="sum-cheat-card">
-      <h3>Tonight's Cheat Sheet</h3>
-      <ul class="cheat-list" id="sum-cheat-list"></ul>
-      <button class="btn btn-ghost copy-btn" onclick="copyCheatSheet()">Copy Cheat Sheet</button>
-    </div>
-    <button class="btn btn-primary btn-full" onclick="goToDashboard()">Back to Dashboard</button>
   </div>
+
+  <!-- PRACTICE SCREEN -->
+  <div id="practice-screen" class="screen">
+    <div class="session-header">
+      <span class="session-progress-text" id="q-counter">1/12</span>
+      <span class="session-topic" id="session-topic-label">Algebra</span>
+      <span class="diff-pill diff-medium" id="diff-pill">Medium</span>
+    </div>
+    <div class="session-progress-bar">
+      <div class="session-progress-fill" id="session-prog-fill" style="width:0%"></div>
+    </div>
+    <div class="question-area" id="question-area">
+      <!-- Injected per question -->
+    </div>
+  </div>
+
+  <!-- STATS SCREEN -->
+  <div id="stats-screen" class="screen">
+    <div class="screen-title">Stats <span>tap topic to drill</span></div>
+    <div class="section-header-stats">📐 Math</div>
+    <div class="topic-grid" id="math-topic-grid"></div>
+    <div class="section-header-stats">📖 Reading & Writing</div>
+    <div class="topic-grid" id="english-topic-grid"></div>
+  </div>
+
+  <!-- DRILL SCREEN -->
+  <div id="drill-screen" class="screen">
+    <div class="drill-header-bar">
+      <button class="back-btn" id="drill-back-btn">←</button>
+      <span class="drill-title" id="drill-title">Drilling: Algebra</span>
+    </div>
+    <div class="session-header" style="position:relative;top:auto;">
+      <span class="session-progress-text" id="drill-q-counter">1/8</span>
+      <span class="session-topic" id="drill-topic-label">Algebra</span>
+      <span class="diff-pill diff-medium" id="drill-diff-pill">Medium</span>
+    </div>
+    <div class="session-progress-bar">
+      <div class="session-progress-fill" id="drill-prog-fill" style="width:0%"></div>
+    </div>
+    <div class="question-area" id="drill-question-area"></div>
+  </div>
+
+  <!-- RESULTS OVERLAY -->
+  <div id="results-overlay">
+    <div class="results-card">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent-bright);margin-bottom:12px;">Session Complete</div>
+      <div class="results-score-big"><span id="res-correct">0</span>/<span id="res-total">12</span></div>
+      <div class="results-label" id="res-label">questions answered</div>
+      <div class="results-stat-row"><span class="label">Weakest today</span><span class="val" id="res-weakest">—</span></div>
+      <div class="results-stat-row"><span class="label">Streak</span><span class="val" id="res-streak">🔥 1 day</span></div>
+      <div class="results-stat-row"><span class="label">Review queue</span><span class="val" id="res-queue">0 questions</span></div>
+      <div class="strategy-tip">
+        <strong>💡 Strategy Tip</strong>
+        <span id="strategy-tip-text"></span>
+      </div>
+      <button class="btn btn-primary" id="res-home-btn">← Back to Home</button>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <nav id="tab-bar">
+    <button class="tab-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Home
+    </button>
+    <button class="tab-btn" data-tab="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+      Stats
+    </button>
+    <button class="tab-btn" data-tab="drill">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+      Drill
+    </button>
+  </nav>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     SCREEN 5 — CHEAT HISTORY
-════════════════════════════════════════════ -->
-<div id="screen-cheats" class="screen">
-  <div class="app-header">
-    <button class="btn btn-ghost" onclick="showScreen('screen-dashboard')" style="padding:0.4rem 0.75rem; font-size:0.85rem;">← Back</button>
-    <span class="logo">Cheat Sheets</span>
-    <span></span>
-  </div>
-  <div class="cheats-body" id="cheats-body"></div>
-</div>
-
-<!-- ════════════════════════════════════════════
-     FIREBASE + APP LOGIC
-════════════════════════════════════════════ -->
-<script type="module">
-// ============================================================
-// ██████████████████████████████████████████████████████████
-//  STEP 1: PASTE YOUR FIREBASE CONFIG HERE
-// ██████████████████████████████████████████████████████████
-// Replace the object below with your own Firebase project config.
-// Get it from: Firebase Console → Project Settings → Your Apps → SDK setup
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBJWtkR9q0XwT_Q9S2xBJLj6qe0Q4ZSETA",
   authDomain: "sat1-6229e.firebaseapp.com",
   projectId: "sat1-6229e",
   storageBucket: "sat1-6229e.firebasestorage.app",
   messagingSenderId: "483610355056",
-  appId: "1:483610355056:web:ce9d82bea540488c7e1bb5",
-  
+  appId: "1:483610355056:web:731d9791c476e3007e1bb5",
+  measurementId: "G-WSS1J1RFCS"
 };
-// ██████████████████████████████████████████████████████████
-// ============================================================
-
-// ============================================================
-// STEP 2: GROQ API KEY
-// You can enter it in the app UI on first load — it gets saved
-// to Firestore per user. Or hard-code it here as a fallback:
-// const HARDCODED_GROQ_KEY = "gsk_...";
-// ============================================================
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-// ── Firebase init ──────────────────────────────────────────
-const app  = initializeApp(FIREBASE_CONFIG);
-const auth = getAuth(app);
-const db   = getFirestore(app);
-
-// ── Constants ──────────────────────────────────────────────
-const GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
-const TOTAL_QUESTIONS = 10;
-const DEFAULT_QUOTA_MIN = 45;
+const GROQ_KEY = "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";
 
-const DAY_TOPICS = [
-  "Algebra & Equations",
-  "Geometry",
-  "Word Problems & Graphs",
-  "Mixed Math",
-  "Grammar & Vocabulary",
-  "Reading Comprehension & Evidence",
-  "Full Timed Simulation"
+const MATH_DOMAINS = ["Algebra","Advanced Math","Problem Solving and Data Analysis","Geometry and Trigonometry"];
+const ENGLISH_DOMAINS = ["Information and Ideas","Craft and Structure","Expression of Ideas","Standard English Conventions"];
+const ALL_DOMAINS = [...MATH_DOMAINS, ...ENGLISH_DOMAINS];
+
+const STRATEGY_TIPS = [
+  "Word problems: underline EXACTLY what they're asking for before reading the numbers. Most mistakes come from solving the wrong thing.",
+  "After you get an answer, re-read the question. Does your answer actually answer what was asked?",
+  "Stats/data questions: the graph IS the answer. Never trust your intuition over what the graph literally shows.",
+  "Evidence questions: the correct answer must be literally supported by the text. If you're making a big inference, you're wrong.",
+  "Vocabulary-in-context: substitute each answer choice into the sentence and read it aloud. The right one fits the TONE, not just the dictionary meaning.",
+  "Transitions (Therefore, However, etc.): identify the relationship between the two ideas BEFORE picking the word. Contrast? Cause-effect? Continuation?",
+  "For geometry: draw and label the figure yourself even if one is provided. Mistakes disappear when you slow down and annotate.",
+  "Careless mistakes on math: after solving, ask 'does this answer make sense in real life?' Negative lengths and probabilities over 1 are red flags.",
+  "For 'which choice best completes' RW questions: eliminate choices that introduce new ideas not mentioned in the passage.",
+  "Time panic fix: skip and flag. A question you skip and return to is often easier with fresh eyes."
 ];
 
-const SYSTEM_PROMPT = `You are a brutal, no-nonsense SAT tutor. The student has one week to go from 1000 to 1300. Both sections are equally weak. Math weaknesses: algebra, equations, geometry, word problems, graphs and data. Reading/Writing weaknesses: grammar rules, vocabulary in context, reading comprehension, evidence-based questions.
-
-Rules you must follow:
-(1) Generate all SAT-style questions yourself from scratch — no links, no references to external resources.
-(2) Ask exactly ONE question per message — never dump multiple questions at once.
-(3) After the student answers, immediately say RIGHT or WRONG, then give a full step-by-step explanation regardless.
-(4) If the student gets the same concept wrong twice in a row, drill that exact concept with 3 more questions before moving on.
-(5) Tone: brutally honest, push hard, zero fluff, zero motivation speeches. If they make a careless mistake, call it out explicitly.
-(6) On Day 6 and 7 only, add this warning after every question: "SAT pace: 75 seconds per question."
-(7) At the end of a session (after 10 questions), output a session summary in this exact format:
-SCORE: X/10
-STREAK: [current streak]
-LOCKED RULE: [one rule to memorize]
-CHEAT SHEET:
-• [bullet 1]
-• [bullet 2]
-• [bullet 3]
-• [bullet 4]
-• [bullet 5]`;
-
-// ── App State ──────────────────────────────────────────────
-let currentUser = null;
-let userData    = {}; // all persistent data
-let groqKey     = "";
-let timerInterval = null;
-let timerSeconds  = 75;
-let sessionStartTime = null;
-let todayTimerInterval = null;
-let lastRetryFn   = null;
-let awaitingAnswer = false;
-
-// ── Firestore helpers ──────────────────────────────────────
-function userDoc() {
-  return doc(db, "users", currentUser.uid);
-}
-
-async function loadUserData() {
-  const snap = await getDoc(userDoc());
-  if (snap.exists()) {
-    userData = snap.data();
-  } else {
-    userData = defaultUserData();
-    await setDoc(userDoc(), userData);
-  }
-}
-
-async function saveUserData() {
-  try {
-    await setDoc(userDoc(), userData, { merge: true });
-  } catch(e) {
-    console.error("Save error", e);
-  }
-}
-
-function defaultUserData() {
-  const today = todayDateStr();
-  return {
-    groqKey: "",
-    quotaMin: DEFAULT_QUOTA_MIN,
-    currentDay: 1,
-    streak: 0,
-    totalCorrect: 0,
-    days: buildDefaultDays(),
-    // time tracking
-    timeLog: {}, // { "YYYY-MM-DD": seconds }
-    rolloverSeconds: 0,
-    lastActiveDate: today,
-  };
-}
-
-function buildDefaultDays() {
-  const days = {};
-  for (let i = 1; i <= 7; i++) {
-    days[i] = {
-      completed: false,
-      score: 0,
-      cheatSheet: null,
-      lockedRule: null,
-      conversation: [],       // full Groq messages array
-      questionCount: 0,
-      correctCount: 0,
-    };
-  }
-  return days;
-}
-
-// ── Date helpers ───────────────────────────────────────────
-function todayDateStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-// ── Auth ───────────────────────────────────────────────────
-window.signInWithGoogle = async function() {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    showToast("Sign-in failed: " + e.message);
-  }
+const TOPIC_TIPS = {
+  "Algebra": "set up the equation step by step. Write every variable you know before solving.",
+  "Advanced Math": "factor completely before solving. Check if it's a difference of squares or a perfect square trinomial.",
+  "Problem Solving and Data Analysis": "find the total first, then set up the ratio or percentage formula.",
+  "Geometry and Trigonometry": "label all given information on the figure and recall SOH-CAH-TOA for trig.",
+  "Information and Ideas": "find specific lines in the passage that directly support your answer. Never infer beyond what's stated.",
+  "Craft and Structure": "think about the author's purpose. Why did they choose that specific word or structure?",
+  "Expression of Ideas": "read both sentences around the transition, identify the logical relationship, then pick.",
+  "Standard English Conventions": "read the full sentence aloud. If it sounds grammatically wrong, it probably is."
 };
 
-window.signOutUser = async function() {
-  await signOut(auth);
-  currentUser = null;
-  userData = {};
-  closeSettings();
-  showScreen('screen-setup');
-};
+// ═══════════════════════════════════════════════════════════════
+// FALLBACK QUESTIONS
+// ═══════════════════════════════════════════════════════════════
+const FALLBACK_QUESTIONS = [
+  // ALGEBRA
+  {id:"fb_001",text:"If $3x - 7 = 2x + 5$, what is the value of $x$?",choices:{A:"$x = 2$",B:"$x = 7$",C:"$x = 12$",D:"$x = -2$"},correct:"C",topic:"Algebra",difficulty:"easy",section:"math"},
+  {id:"fb_002",text:"A line passes through the points $(2, 5)$ and $(4, 11)$. Which of the following is the equation of this line?",choices:{A:"$y = 3x - 1$",B:"$y = 2x + 1$",C:"$y = 3x + 1$",D:"$y = 2x - 1$"},correct:"A",topic:"Algebra",difficulty:"medium",section:"math"},
+  {id:"fb_003",text:"A store sells apples for $\\$1.50$ each and oranges for $\\$2.00$ each. If Marcus buys a total of 10 fruits and spends exactly $\\$17.00$, how many apples did he buy?",choices:{A:"4",B:"5",C:"6",D:"7"},correct:"C",topic:"Algebra",difficulty:"hard",section:"math"},
+  // ADVANCED MATH
+  {id:"fb_004",text:"Which of the following is equivalent to $x^2 - 9x + 20$?",choices:{A:"$(x-4)(x-5)$",B:"$(x+4)(x+5)$",C:"$(x-10)(x+1)$",D:"$(x-2)(x-10)$"},correct:"A",topic:"Advanced Math",difficulty:"easy",section:"math"},
+  {id:"fb_005",text:"If $f(x) = 2x^2 - 3x + 1$, what is $f(-2)$?",choices:{A:"$3$",B:"$15$",C:"$11$",D:"$-1$"},correct:"B",topic:"Advanced Math",difficulty:"medium",section:"math"},
+  {id:"fb_006",text:"The function $g$ is defined by $g(x) = \\frac{x^2 - 4}{x - 2}$ for $x \\neq 2$. Which value does $g(x)$ approach as $x$ approaches 2?",choices:{A:"$0$",B:"$2$",C:"$4$",D:"$\\text{undefined}$"},correct:"C",topic:"Advanced Math",difficulty:"hard",section:"math"},
+  // PROBLEM SOLVING AND DATA ANALYSIS
+  {id:"fb_007",text:"A survey of 200 students found that 60% prefer math over English. How many students prefer math?",choices:{A:"60",B:"100",C:"120",D:"140"},correct:"C",topic:"Problem Solving and Data Analysis",difficulty:"easy",section:"math"},
+  {id:"fb_008",text:"The table below shows the number of hours five students studied and their test scores. Which student shows the greatest improvement per hour of study compared to a baseline of 50 points?\nStudent A: 2 hrs, 64 pts. Student B: 4 hrs, 78 pts. Student C: 3 hrs, 74 pts. Student D: 1 hr, 58 pts. Student E: 5 hrs, 82 pts.",choices:{A:"Student A",B:"Student B",C:"Student C",D:"Student D"},correct:"D",topic:"Problem Solving and Data Analysis",difficulty:"medium",section:"math"},
+  {id:"fb_009",text:"A data set has a mean of 45, a median of 42, and a mode of 38. If the highest value (90) is removed from the set, which measure of central tendency is LEAST likely to change significantly?",choices:{A:"Mean",B:"Median",C:"Mode",D:"All will change equally"},correct:"C",topic:"Problem Solving and Data Analysis",difficulty:"hard",section:"math"},
+  // GEOMETRY AND TRIG
+  {id:"fb_010",text:"A rectangle has a length of 12 and a width of 5. What is the length of its diagonal?",choices:{A:"$13$",B:"$17$",C:"$7$",D:"$\\sqrt{119}$"},correct:"A",topic:"Geometry and Trigonometry",difficulty:"easy",section:"math"},
+  {id:"fb_011",text:"In a right triangle, $\\sin(\\theta) = \\frac{3}{5}$. What is $\\cos(\\theta)$?",choices:{A:"$\\frac{4}{5}$",B:"$\\frac{3}{4}$",C:"$\\frac{5}{3}$",D:"$\\frac{2}{5}$"},correct:"A",topic:"Geometry and Trigonometry",difficulty:"medium",section:"math"},
+  {id:"fb_012",text:"A circle has an area of $49\\pi$. A sector of this circle subtends a central angle of $90°$. What is the area of the sector?",choices:{A:"$\\frac{49\\pi}{4}$",B:"$\\frac{49\\pi}{2}$",C:"$12.25$",D:"$7\\pi$"},correct:"A",topic:"Geometry and Trigonometry",difficulty:"hard",section:"math"},
+  // INFORMATION AND IDEAS
+  {id:"fb_013",text:"The following passage is adapted from a 2022 article on urban ecology.\n\n\"Green roofs — rooftops covered with vegetation — have gained popularity in cities worldwide. Studies show that they reduce building energy use by up to 25% in summer months, absorb significant quantities of rainwater, and lower urban temperatures by several degrees. Critics, however, note that installation costs remain prohibitive for most building owners.\"\n\nBased on the passage, which of the following best describes the overall perspective on green roofs?",choices:{A:"Green roofs are impractical and should be discouraged.",B:"Green roofs offer significant environmental benefits but face economic barriers.",C:"Green roofs are the most effective solution to climate change.",D:"Green roofs are popular but have no measurable benefits."},correct:"B",topic:"Information and Ideas",difficulty:"easy",section:"english"},
+  {id:"fb_014",text:"Passage: \"While many assume that multitasking improves productivity, research consistently demonstrates the opposite. Studies at Stanford University found that heavy multitaskers performed worse on tests of memory, attention, and the ability to switch between tasks than light multitaskers. The researchers were surprised that people who multitask all the time are, in fact, worse at filtering irrelevant information.\"\n\nWhich claim is directly supported by the passage?",choices:{A:"Multitasking is beneficial when tasks are simple.",B:"Stanford researchers designed the best attention tests available.",C:"Frequent multitaskers struggle more with filtering distractions than less frequent ones.",D:"Memory improves with practice in multitasking."},correct:"C",topic:"Information and Ideas",difficulty:"medium",section:"english"},
+  {id:"fb_015",text:"A researcher studying ancient trade routes writes: 'The presence of obsidian artifacts far from volcanic sources demonstrates long-distance trade networks existed millennia before historians previously believed.' Which of the following, if true, would most strengthen this conclusion?",choices:{A:"Obsidian is a naturally occurring volcanic glass.",B:"Chemical analysis confirms the obsidian originated from a specific distant volcano.",C:"Ancient peoples were capable of long-distance travel.",D:"Similar artifacts have been found in museums worldwide."},correct:"B",topic:"Information and Ideas",difficulty:"hard",section:"english"},
+  // CRAFT AND STRUCTURE
+  {id:"fb_016",text:"In the following sentence, the word 'pedestrian' is used in context:\n\n'Critics dismissed the film as pedestrian, noting that it relied on overused plot devices and offered nothing surprising.'\n\nAs used in this sentence, 'pedestrian' most nearly means:",choices:{A:"related to walking",B:"urban in setting",C:"ordinary and unimaginative",D:"critically acclaimed"},correct:"C",topic:"Craft and Structure",difficulty:"easy",section:"english"},
+  {id:"fb_017",text:"A student is reading an essay that opens with a personal anecdote, then presents data, then ends with a call to action. What is the primary purpose of opening with a personal anecdote?",choices:{A:"To provide statistical evidence",B:"To establish the author's credibility through emotional engagement",C:"To introduce counterarguments",D:"To summarize the essay's conclusions"},correct:"B",topic:"Craft and Structure",difficulty:"medium",section:"english"},
+  {id:"fb_018",text:"Passage A argues that social media harms teenage mental health by citing correlation data. Passage B argues the relationship is more complex, noting that causation has not been established. Which best describes the relationship between the two passages?",choices:{A:"Passage B directly contradicts all claims in Passage A.",B:"Passage B refines Passage A's argument by questioning its causal logic.",C:"Passage B is unrelated to Passage A's central concern.",D:"Passage A and B agree on methodology but disagree on conclusions."},correct:"B",topic:"Craft and Structure",difficulty:"hard",section:"english"},
+  // EXPRESSION OF IDEAS
+  {id:"fb_019",text:"Which transition best completes the sentence?\n\n'The team practiced every day for six months. ______, they won the championship by a wide margin.'",choices:{A:"However",B:"For instance",C:"Nevertheless",D:"Consequently"},correct:"D",topic:"Expression of Ideas",difficulty:"easy",section:"english"},
+  {id:"fb_020",text:"A student wants to add a sentence that best connects these two ideas:\n[1] 'Electric vehicles produce zero direct emissions.' [2] 'Power plants that charge them may still burn fossil fuels.'\nWhich sentence best serves as a bridge?",choices:{A:"Electric vehicles are becoming more affordable.",B:"However, the environmental impact depends on how the electricity itself is generated.",C:"Many consumers prefer hybrid vehicles as a compromise.",D:"Charging infrastructure remains a significant challenge."},correct:"B",topic:"Expression of Ideas",difficulty:"medium",section:"english"},
+  {id:"fb_021",text:"A writer drafting a report about declining bee populations wants to include a sentence that synthesizes two sources: Source 1 notes pesticide use is a primary driver; Source 2 notes habitat loss is equally critical. Which sentence best synthesizes both?",choices:{A:"Pesticides are the single greatest threat to bee populations.",B:"Habitat loss is a more urgent problem than pesticide use.",C:"Both pesticide exposure and habitat loss contribute significantly to bee population decline.",D:"Scientists disagree entirely about what causes bee population decline."},correct:"C",topic:"Expression of Ideas",difficulty:"hard",section:"english"},
+  // STANDARD ENGLISH CONVENTIONS
+  {id:"fb_022",text:"Which version of the underlined portion is grammatically correct?\n\n'Each of the students [has / have] submitted their assignment on time.'",choices:{A:"have",B:"has",C:"are having",D:"were having"},correct:"B",topic:"Standard English Conventions",difficulty:"easy",section:"english"},
+  {id:"fb_023",text:"Which sentence uses punctuation correctly?",choices:{A:"The conference, which was held in Boston attracted over 500 attendees.",B:"The conference, which was held in Boston, attracted over 500 attendees.",C:"The conference which was held in Boston, attracted over 500 attendees.",D:"The conference which was held in Boston attracted, over 500 attendees."},correct:"B",topic:"Standard English Conventions",difficulty:"medium",section:"english"},
+  {id:"fb_024",text:"Which of the following corrects the error in the sentence below?\n\n'Running through the park, the trees looked beautiful to Maria.'",choices:{A:"Running through the park, Maria found the trees beautiful.",B:"The trees, running through the park, looked beautiful to Maria.",C:"Maria, she was running through the park and the trees looked beautiful.",D:"The trees looked beautiful, running through the park to Maria."},correct:"A",topic:"Standard English Conventions",difficulty:"hard",section:"english"}
+];
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    await loadUserData();
-    groqKey = userData.groqKey || "";
-    renderHeaderAvatar(user);
-    checkRollover();
-    startDayTimer();
-    if (!groqKey) {
-      showScreen('screen-setup');
-    } else {
-      showScreen('screen-dashboard');
-      renderDashboard();
-    }
-  } else {
-    showScreen('screen-setup');
-  }
-  hide('loading');
-});
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let db, auth, currentUser;
+let userProfile = {};
+let sessionCache = { math: [], english: [] };
+let currentSession = [];
+let currentQuestionIndex = 0;
+let sessionResults = [];
+let sessionTopicBreakdown = {};
+let dailyPlanData = {};
+let topicStatsCache = {};
+let wrongAnswersQueue = [];
+let isDrillMode = false;
+let drillTopic = "";
+let drillSession = [];
+let drillIndex = 0;
+let drillResults = [];
+let answerLocked = false;
 
-function renderHeaderAvatar(user) {
-  const el = document.getElementById('header-avatar');
-  if (!el) return;
-  if (user.photoURL) {
-    el.innerHTML = `<img class="avatar" src="${user.photoURL}" alt="avatar"/>`;
-  } else {
-    const initials = (user.displayName||user.email||"U")[0].toUpperCase();
-    el.innerHTML = `<div class="avatar-fallback">${initials}</div>`;
-  }
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
-// ── Setup / Key ────────────────────────────────────────────
-window.saveGroqKey = async function() {
-  const key = document.getElementById('groq-key-input').value.trim();
-  if (!key) { showToast("Enter a Groq API key first."); return; }
-  if (!currentUser) { showToast("Sign in with Google first."); return; }
-  groqKey = key;
-  userData.groqKey = key;
-  await saveUserData();
-  showScreen('screen-dashboard');
-  renderDashboard();
-};
-
-window.saveKeyFromSettings = async function() {
-  const key = document.getElementById('settings-key-input').value.trim();
-  if (!key) { showToast("Enter a valid key."); return; }
-  groqKey = key;
-  userData.groqKey = key;
-  await saveUserData();
-  showToast("Key saved.");
-};
-
-window.saveQuotaFromSettings = async function() {
-  const v = parseInt(document.getElementById('settings-quota-input').value);
-  if (!v || v < 5) { showToast("Enter a valid number of minutes."); return; }
-  userData.quotaMin = v;
-  await saveUserData();
-  renderDashboard();
-  showToast("Quota updated.");
-};
-
-// ── Settings panel ─────────────────────────────────────────
-window.openSettings = function() {
-  document.getElementById('settings-panel').classList.add('open');
-  document.getElementById('settings-overlay').classList.add('show');
-  document.getElementById('settings-key-input').value = userData.groqKey || "";
-  document.getElementById('settings-quota-input').value = userData.quotaMin || DEFAULT_QUOTA_MIN;
-};
-window.closeSettings = function() {
-  document.getElementById('settings-panel').classList.remove('open');
-  document.getElementById('settings-overlay').classList.remove('show');
-};
-
-// ── Screen routing ─────────────────────────────────────────
-window.showScreen = function(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (id === 'screen-cheats') renderCheatHistory();
-};
-
-// ── Dashboard ──────────────────────────────────────────────
-function renderDashboard() {
-  const grid = document.getElementById('day-grid');
-  grid.innerHTML = '';
-  const cur = userData.currentDay || 1;
-  let totalCorrect = 0;
-  let daysCompleted = 0;
-
-  for (let i = 1; i <= 7; i++) {
-    const d = userData.days[i];
-    const isActive    = i === cur && !d.completed;
-    const isCompleted = d.completed;
-    const isLocked    = i > cur;
-    if (d.correctCount) totalCorrect += d.correctCount;
-    if (d.completed) daysCompleted++;
-
-    const card = document.createElement('div');
-    card.className = 'day-card ' + (isActive ? 'active-day' : isCompleted ? 'completed' : 'locked');
-    card.innerHTML = `
-      <div>
-        <div class="day-num">Day ${i}</div>
-        <div class="day-topic">${DAY_TOPICS[i-1]}</div>
-      </div>
-      <div class="day-status ${isActive?'now':isCompleted?'done':'lock'}">
-        ${isActive ? '▶ Active' : isCompleted ? `✓ ${d.score||0}/10` : '🔒 Locked'}
-      </div>
-      ${isActive ? '<div class="active-dot"></div>' : ''}
-    `;
-    if (isActive || isCompleted) {
-      card.addEventListener('click', () => {
-        if (isCompleted) {
-          showToast(`Day ${i} already completed. Score: ${d.score}/10`);
-        } else {
-          showScreen('screen-habits');
-          resetHabits();
-        }
-      });
-    }
-    grid.appendChild(card);
-  }
-
-  document.getElementById('dash-streak').textContent = userData.streak || 0;
-  document.getElementById('dash-score').textContent   = totalCorrect;
-  document.getElementById('dash-days').textContent    = `${daysCompleted}/7`;
-
-  const pct = Math.round((daysCompleted / 7) * 100);
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-pct').textContent  = pct + '%';
+function daysUntil(dateStr) {
+  if (!dateStr) return 0;
+  const target = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  target.setHours(0,0,0,0);
+  return Math.max(0, Math.round((target - now) / 86400000));
 }
-
-// ── Time Tracking ──────────────────────────────────────────
-function checkRollover() {
-  const last = userData.lastActiveDate;
-  const today = todayDateStr();
-  if (last && last !== today) {
-    // new day — check if quota was met yesterday
-    const quotaSec = (userData.quotaMin || DEFAULT_QUOTA_MIN) * 60;
-    const yesterdayTime = (userData.timeLog && userData.timeLog[last]) || 0;
-    const deficit = Math.max(0, quotaSec - yesterdayTime);
-    if (deficit > 0) {
-      userData.rolloverSeconds = (userData.rolloverSeconds || 0) + deficit;
-    }
-    userData.lastActiveDate = today;
-    saveUserData();
-  }
+function stripLatex(text) {
+  return text.replace(/\$\$[\s\S]*?\$\$/g, '[math]')
+             .replace(/\$[^$]*?\$/g, '[math]')
+             .replace(/\\\([\s\S]*?\\\)/g, '[math]')
+             .replace(/\\\[[\s\S]*?\\\]/g, '[math]');
 }
-
-function startDayTimer() {
-  if (todayTimerInterval) clearInterval(todayTimerInterval);
-  todayTimerInterval = setInterval(() => {
-    updateTodayTimeDisplay();
-  }, 1000);
-  updateTodayTimeDisplay();
+function uuid() {
+  return 'xxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16));
 }
-
-function addTodayTime(seconds) {
-  const today = todayDateStr();
-  if (!userData.timeLog) userData.timeLog = {};
-  userData.timeLog[today] = (userData.timeLog[today] || 0) + seconds;
-  saveUserData();
-}
-
-function updateTodayTimeDisplay() {
-  const today = todayDateStr();
-  const secs = (userData.timeLog && userData.timeLog[today]) || 0;
-  const quotaSec = ((userData.quotaMin || DEFAULT_QUOTA_MIN) * 60) + (userData.rolloverSeconds || 0);
-
-  document.getElementById('today-time-display').textContent = formatTime(secs);
-  document.getElementById('quota-display').textContent = formatTime(quotaSec);
-
-  const pct = Math.min(100, (secs / quotaSec) * 100);
-  const fill = document.getElementById('time-quota-fill');
-  fill.style.width = pct + '%';
-  fill.style.background = pct >= 100 ? 'var(--success)' : pct > 60 ? 'var(--warn)' : 'var(--accent)';
-
-  const rollover = userData.rolloverSeconds || 0;
-  const rl = document.getElementById('rollover-label');
-  if (rollover > 0) {
-    rl.textContent = `+${formatTime(rollover)} rolled over from yesterday`;
-    rl.style.color = 'var(--warn)';
-  } else if (pct >= 100) {
-    rl.textContent = "Quota met for today ✓";
-    rl.style.color = 'var(--success)';
-  } else {
-    rl.textContent = "";
-  }
-}
-
-function formatTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2,'0')}`;
-}
-
-// ── Habits ─────────────────────────────────────────────────
-const habitsState = { h1: false, h2: false, h3: false };
-
-function resetHabits() {
-  ['h1','h2','h3'].forEach(id => {
-    habitsState[id] = false;
-    document.getElementById(id).classList.remove('checked');
-    document.getElementById(id+'-check').style.background = '';
-    document.getElementById(id+'-check').style.borderColor = '';
-    document.getElementById(id+'-icon').style.display = 'none';
-  });
-  document.getElementById('ready-btn').disabled = true;
-}
-
-window.toggleHabit = function(id) {
-  habitsState[id] = !habitsState[id];
-  const el = document.getElementById(id);
-  const icon = document.getElementById(id+'-icon');
-  el.classList.toggle('checked', habitsState[id]);
-  icon.style.display = habitsState[id] ? 'block' : 'none';
-  const allChecked = habitsState.h1 && habitsState.h2 && habitsState.h3;
-  document.getElementById('ready-btn').disabled = !allChecked;
-};
-
-// ── Session ─────────────────────────────────────────────────
-window.startSession = async function() {
-  const day = userData.currentDay || 1;
-  const dayData = userData.days[day];
-
-  showScreen('screen-session');
-  document.getElementById('session-day-label').textContent  = `Day ${day}`;
-  document.getElementById('session-topic-label').textContent = DAY_TOPICS[day-1];
-
-  const showPace = day >= 6;
-  document.getElementById('pace-warn').style.display    = showPace ? 'block' : 'none';
-  document.getElementById('timer-display').style.display = showPace ? 'block' : 'none';
-
-  updateSessionCounters();
-
-  const chatArea = document.getElementById('chat-area');
-  chatArea.innerHTML = '';
-
-  sessionStartTime = Date.now();
-
-  // Restore conversation or start fresh
-  const conv = dayData.conversation || [];
-  if (conv.length === 0) {
-    // Brand new session — ask first question
-    await sendToGroq(null, day, true);
-  } else {
-    // Restore existing conversation bubbles
-    restoreConversation(conv, day);
-    // If not yet at 10 questions and last message was AI, allow answering
-    if (dayData.questionCount < TOTAL_QUESTIONS) {
-      enableInput();
-    }
-  }
-
-  if (showPace) startQuestionTimer(day);
-};
-
-function restoreConversation(conv, day) {
-  const chatArea = document.getElementById('chat-area');
-  for (const msg of conv) {
-    if (msg.role === 'assistant') addBubble(msg.content, 'ai');
-    else if (msg.role === 'user') addBubble(msg.content, 'user');
-  }
-  scrollChat();
-}
-
-function updateSessionCounters() {
-  const day = userData.currentDay || 1;
-  const d   = userData.days[day];
-  const qn  = d.questionCount || 0;
-  const cor = d.correctCount  || 0;
-  document.getElementById('q-counter').textContent = `Q ${qn}/${TOTAL_QUESTIONS}`;
-  document.getElementById('q-score').textContent   = `${cor} ✓`;
-}
-
-async function sendToGroq(userMessage, day, isFirstMessage = false) {
-  const d = userData.days[day];
-
-  // Build messages array
-  const messages = [
-    { role: 'system', content: SYSTEM_PROMPT + `\n\nCurrent day: ${day}. Topic: ${DAY_TOPICS[day-1]}. Questions asked so far: ${d.questionCount}. Correct so far: ${d.correctCount}.` },
-    ...(d.conversation || [])
-  ];
-
-  if (isFirstMessage) {
-    messages.push({ role: 'user', content: `Start my Day ${day} session on ${DAY_TOPICS[day-1]}. Ask me the first question now.` });
-  }
-
-  disableInput();
-  const typingBubble = addTypingBubble();
-
-  try {
-    const res = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqKey}`
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        max_tokens: 1000,
-        messages
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "";
-
-    typingBubble.remove();
-    addBubble(reply, 'ai');
-
-    // Save to conversation
-    if (isFirstMessage) {
-      d.conversation.push(
-        { role: 'user', content: `Start my Day ${day} session on ${DAY_TOPICS[day-1]}. Ask me the first question now.` },
-        { role: 'assistant', content: reply }
-      );
-    } else {
-      d.conversation.push({ role: 'assistant', content: reply });
-    }
-
-    // Check if this is the summary message (after 10 questions)
-    if (reply.includes('SCORE:') && reply.includes('CHEAT SHEET:')) {
-      parseSummaryAndFinish(reply, day);
-      return;
-    }
-
-    // Otherwise, question was asked — enable answer input
-    d.questionCount = (d.questionCount || 0) + 1;
-    updateSessionCounters();
-    await saveUserData();
-    enableInput();
-
-    if (day >= 6) startQuestionTimer(day);
-
-  } catch(e) {
-    typingBubble.remove();
-    const errBubble = addBubble(`Groq couldn't respond — ${e.message}. Tap to retry.`, 'error');
-    errBubble.addEventListener('click', () => {
-      errBubble.remove();
-      sendToGroq(userMessage, day, isFirstMessage);
-    });
-    enableInput();
-  }
-}
-
-window.submitAnswer = async function() {
-  if (!awaitingAnswer) return;
-  const input = document.getElementById('answer-input');
-  const answer = input.value.trim();
-  if (!answer) return;
-
-  input.value = '';
-  autoResizeTextarea(input);
-  disableInput();
-
-  const day = userData.currentDay || 1;
-  const d   = userData.days[day];
-
-  addBubble(answer, 'user');
-  stopQuestionTimer();
-
-  // Add user answer to conversation
-  d.conversation.push({ role: 'user', content: answer });
-  await saveUserData();
-
-  // Track time
-  if (sessionStartTime) {
-    const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-    addTodayTime(elapsed);
-    sessionStartTime = Date.now();
-  }
-
-  // Check if we need to request summary (after user's 10th answer)
-  const qCount = d.questionCount || 0;
-  if (qCount >= TOTAL_QUESTIONS) {
-    // Request summary
-    await sendToGroq(answer, day, false);
-  } else {
-    // Get feedback + next question
-    await sendToGroq(answer, day, false);
-  }
-};
-
-window.handleInputKey = function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    submitAnswer();
-  }
-};
-
-function enableInput() {
-  awaitingAnswer = true;
-  document.getElementById('send-btn').disabled = false;
-  document.getElementById('answer-input').disabled = false;
-  document.getElementById('answer-input').focus();
-}
-
-function disableInput() {
-  awaitingAnswer = false;
-  document.getElementById('send-btn').disabled = true;
-  document.getElementById('answer-input').disabled = true;
-}
-
-function addBubble(text, type) {
-  const chatArea = document.getElementById('chat-area');
-  const div = document.createElement('div');
-  div.className = `bubble ${type}`;
-  div.textContent = text;
-  chatArea.appendChild(div);
-  scrollChat();
-  return div;
-}
-
-function addTypingBubble() {
-  const chatArea = document.getElementById('chat-area');
-  const div = document.createElement('div');
-  div.className = 'bubble ai';
-  div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  chatArea.appendChild(div);
-  scrollChat();
-  return div;
-}
-
-function scrollChat() {
-  const chat = document.getElementById('chat-area');
-  chat.scrollTop = chat.scrollHeight;
-}
-
-// ── Timer (Days 6 & 7) ─────────────────────────────────────
-function startQuestionTimer(day) {
-  if (day < 6) return;
-  stopQuestionTimer();
-  timerSeconds = 75;
-  updateTimerDisplay();
-  timerInterval = setInterval(() => {
-    timerSeconds--;
-    updateTimerDisplay();
-    if (timerSeconds <= 0) {
-      stopQuestionTimer();
-      addBubble("TIME'S UP. You ran over 75 seconds. SAT doesn't wait.", 'ai');
-    }
-  }, 1000);
-}
-
-function stopQuestionTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  const td = document.getElementById('timer-display');
-  td.classList.remove('danger');
-}
-
-function updateTimerDisplay() {
-  const m = Math.floor(timerSeconds / 60);
-  const s = timerSeconds % 60;
-  const td = document.getElementById('timer-display');
-  td.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-  td.classList.toggle('danger', timerSeconds <= 15);
-}
-
-// ── Summary Parsing ────────────────────────────────────────
-function parseSummaryAndFinish(text, day) {
-  stopQuestionTimer();
-  disableInput();
-
-  // Parse score
-  const scoreMatch = text.match(/SCORE:\s*(\d+)\/10/i);
-  const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
-
-  // Parse locked rule
-  const lockedMatch = text.match(/LOCKED RULE:\s*(.+?)(?=\n|CHEAT SHEET|$)/is);
-  const lockedRule  = lockedMatch ? lockedMatch[1].trim() : "";
-
-  // Parse cheat sheet bullets
-  const csMatch = text.match(/CHEAT SHEET:([\s\S]+)/i);
-  const bullets  = [];
-  if (csMatch) {
-    const raw = csMatch[1];
-    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.startsWith('•') || l.startsWith('-') || l.startsWith('*'));
-    lines.forEach(l => bullets.push(l.replace(/^[•\-\*]\s*/, '').trim()));
-  }
-
-  // Save to userData
-  const d = userData.days[day];
-  d.completed  = true;
-  d.score      = score;
-  d.correctCount = score;
-  d.lockedRule  = lockedRule;
-  d.cheatSheet  = bullets;
-
-  // Update streak
-  if (score >= 6) {
-    userData.streak = (userData.streak || 0) + 1;
-  } else {
-    userData.streak = 0;
-  }
-  userData.totalCorrect = (userData.totalCorrect || 0) + score;
-
-  // Advance currentDay if not last
-  if (day < 7) userData.currentDay = day + 1;
-
-  saveUserData().then(() => {
-    // Final time tracking
-    if (sessionStartTime) {
-      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-      addTodayTime(elapsed);
-      sessionStartTime = null;
-    }
-    showSummary(score, day, lockedRule, bullets);
-  });
-}
-
-function showSummary(score, day, lockedRule, bullets) {
-  showScreen('screen-summary');
-
-  document.getElementById('sum-score').textContent     = `${score}/10`;
-  document.getElementById('sum-day-label').textContent = `Day ${day} — ${DAY_TOPICS[day-1]}`;
-  document.getElementById('sum-streak').textContent    = userData.streak || 0;
-  document.getElementById('sum-locked-rule').textContent = lockedRule || "Review your mistakes.";
-
-  const list = document.getElementById('sum-cheat-list');
-  list.innerHTML = '';
-  bullets.forEach(b => {
-    const li = document.createElement('li');
-    li.textContent = b;
-    list.appendChild(li);
-  });
-}
-
-window.copyCheatSheet = function() {
-  const day = userData.currentDay > 1 ? userData.currentDay - 1 : userData.currentDay;
-  const d   = userData.days[day];
-  if (!d.cheatSheet) return;
-  const text = `Day ${day} — ${DAY_TOPICS[day-1]} Cheat Sheet:\n` +
-    d.cheatSheet.map(b => `• ${b}`).join('\n');
-  navigator.clipboard.writeText(text).then(() => showToast("Copied!")).catch(() => showToast("Copy failed."));
-};
-
-window.goToDashboard = function() {
-  showScreen('screen-dashboard');
-  renderDashboard();
-};
-
-// ── Cheat History ──────────────────────────────────────────
-function renderCheatHistory() {
-  const body = document.getElementById('cheats-body');
-  body.innerHTML = '';
-  let found = false;
-  for (let i = 1; i <= 7; i++) {
-    const d = userData.days[i];
-    if (!d.completed || !d.cheatSheet) continue;
-    found = true;
-    const card = document.createElement('div');
-    card.className = 'cheat-sheet-card';
-    card.innerHTML = `
-      <h3 style="margin-bottom:0.4rem;">Day ${i} — ${DAY_TOPICS[i-1]}</h3>
-      <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">Score: ${d.score}/10</div>
-      <ul class="cheat-list">${d.cheatSheet.map(b=>`<li>${b}</li>`).join('')}</ul>
-      ${d.lockedRule ? `<div class="locked-rule" style="margin-top:0.75rem;"><div class="locked-rule-label">Locked Rule</div>${d.lockedRule}</div>` : ''}
-    `;
-    body.appendChild(card);
-  }
-  if (!found) {
-    body.innerHTML = '<p class="text-muted text-center" style="padding:2rem;">Complete sessions to unlock cheat sheets.</p>';
-  }
-}
-
-// ── Textarea auto-resize ───────────────────────────────────
-document.getElementById('answer-input').addEventListener('input', function() {
-  autoResizeTextarea(this);
-});
-
-function autoResizeTextarea(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
-}
-
-// ── Toast ──────────────────────────────────────────────────
-window.showToast = function(msg, duration=2500) {
+function showToast(msg, duration=2500) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), duration);
-};
+}
+function setLoadingText(txt) {
+  document.getElementById('loading-sub-text').textContent = txt;
+}
+function renderMath(el) {
+  if (!el || typeof renderMathInElement === 'undefined') return;
+  try {
+    renderMathInElement(el, {
+      delimiters: [
+        {left:"$$",right:"$$",display:true},
+        {left:"$",right:"$",display:false},
+        {left:"\\(",right:"\\)",display:false},
+        {left:"\\[",right:"\\]",display:true}
+      ],
+      throwOnError: false
+    });
+  } catch(e) {}
+}
 
-// ── Utility ────────────────────────────────────────────────
-function hide(id) { document.getElementById(id).style.display = 'none'; }
-function show(id) { document.getElementById(id).style.display = ''; }
+// ═══════════════════════════════════════════════════════════════
+// SCREEN NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.opacity = '0';
+  });
+  const target = document.getElementById(id);
+  if (!target) return;
+  target.classList.add('active');
+  setTimeout(() => target.style.opacity = '1', 10);
+  // Tab bar visibility
+  const showTab = ['home-screen','stats-screen'].includes(id);
+  document.getElementById('tab-bar').classList.toggle('visible', showTab);
+  // Active tab
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const tab = b.dataset.tab;
+    const active = (tab === 'home' && id === 'home-screen') ||
+                   (tab === 'stats' && id === 'stats-screen');
+    b.classList.toggle('active', active);
+  });
+}
 
-// Initial hide of loading after Firebase resolves
-// (onAuthStateChanged handles this)
+// ═══════════════════════════════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════════════════════════════
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    db = firebase.firestore();
+    auth = firebase.auth();
+    return true;
+  } catch(e) {
+    console.error("Firebase init failed", e);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FIRESTORE HELPERS
+// ═══════════════════════════════════════════════════════════════
+async function getUserDoc() {
+  if (!currentUser) return null;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).get();
+    return snap.exists ? snap.data() : null;
+  } catch(e) { console.error(e); return null; }
+}
+async function setUserDoc(data) {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).set(data, {merge:true});
+  } catch(e) { console.error(e); }
+}
+async function getTopicStats() {
+  if (!currentUser) return {};
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('topicStats').get();
+    const out = {};
+    snap.forEach(d => out[d.id] = d.data());
+    return out;
+  } catch(e) { return {}; }
+}
+async function updateTopicStat(topic, isCorrect) {
+  if (!currentUser) return;
+  const ref = db.collection('users').doc(currentUser.uid).collection('topicStats').doc(topic);
+  try {
+    const snap = await ref.get();
+    let data = snap.exists ? snap.data() : {attempts:0,correct:0,difficulty:"easy",consecutiveCorrect:0,consecutiveWrong:0};
+    data.attempts = (data.attempts||0) + 1;
+    if (isCorrect) {
+      data.correct = (data.correct||0) + 1;
+      data.consecutiveCorrect = (data.consecutiveCorrect||0) + 1;
+      data.consecutiveWrong = 0;
+    } else {
+      data.consecutiveWrong = (data.consecutiveWrong||0) + 1;
+      data.consecutiveCorrect = 0;
+    }
+    // Adaptive difficulty
+    if (data.consecutiveCorrect >= 3) {
+      if (data.difficulty === 'easy') data.difficulty = 'medium';
+      else if (data.difficulty === 'medium') data.difficulty = 'hard';
+      data.consecutiveCorrect = 0;
+    }
+    if (data.consecutiveWrong >= 3) {
+      if (data.difficulty === 'hard') data.difficulty = 'medium';
+      else if (data.difficulty === 'medium') data.difficulty = 'easy';
+      data.consecutiveWrong = 0;
+    }
+    await ref.set(data, {merge:true});
+    topicStatsCache[topic] = data;
+  } catch(e) { console.error(e); }
+}
+async function saveWrongAnswer(q, studentAnswer) {
+  if (!currentUser) return;
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate()+1);
+    await db.collection('users').doc(currentUser.uid)
+      .collection('wrongAnswers').doc(q.id).set({
+        questionText: q.text,
+        choices: q.choices,
+        correctAnswer: q.correct,
+        studentAnswer,
+        topic: q.topic,
+        difficulty: q.difficulty,
+        section: q.section,
+        nextReviewDate: firebase.firestore.Timestamp.fromDate(tomorrow),
+        reviewCount: 0,
+        mastered: false
+      }, {merge:false});
+  } catch(e) { console.error(e); }
+}
+async function updateWrongAnswerReview(questionId, isCorrect) {
+  if (!currentUser) return;
+  try {
+    const ref = db.collection('users').doc(currentUser.uid).collection('wrongAnswers').doc(questionId);
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    const rc = data.reviewCount || 0;
+    if (isCorrect) {
+      let days = rc === 0 ? 3 : rc === 1 ? 7 : null;
+      if (days === null) {
+        await ref.update({mastered:true});
+      } else {
+        const next = new Date();
+        next.setDate(next.getDate()+days);
+        await ref.update({reviewCount: rc+1, nextReviewDate: firebase.firestore.Timestamp.fromDate(next)});
+      }
+    } else {
+      const next = new Date();
+      next.setDate(next.getDate()+1);
+      await ref.update({nextReviewDate: firebase.firestore.Timestamp.fromDate(next)});
+    }
+  } catch(e) { console.error(e); }
+}
+async function getDueReviewQuestions() {
+  if (!currentUser) return [];
+  try {
+    const now = firebase.firestore.Timestamp.now();
+    const snap = await db.collection('users').doc(currentUser.uid).collection('wrongAnswers')
+      .where('mastered','==',false)
+      .where('nextReviewDate','<=',now)
+      .limit(4).get();
+    return snap.docs.map(d => ({
+      id: d.id,
+      text: d.data().questionText,
+      choices: d.data().choices,
+      correct: d.data().correctAnswer,
+      topic: d.data().topic,
+      difficulty: d.data().difficulty,
+      section: d.data().section,
+      isReview: true
+    }));
+  } catch(e) { return []; }
+}
+async function getWrongAnswerCount() {
+  if (!currentUser) return 0;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('wrongAnswers')
+      .where('mastered','==',false).get();
+    return snap.size;
+  } catch(e) { return 0; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPENSAT API
+// ═══════════════════════════════════════════════════════════════
+function normalizeQuestion(q) {
+  let choices = {A:'',B:'',C:'',D:''};
+  if (q.answer_choices) {
+    const letters = ['A','B','C','D'];
+    q.answer_choices.forEach((c,i) => {
+      if (i < 4) choices[letters[i]] = typeof c === 'object' ? (c.text||c.content||JSON.stringify(c)) : String(c);
+    });
+  } else if (q.choices) {
+    choices = q.choices;
+  }
+  return {
+    id: q.id || uuid(),
+    text: q.question || q.text || q.stem || '',
+    choices,
+    correct: q.correct_answer || q.correct || 'A',
+    topic: q.domain || q.topic || 'Algebra',
+    difficulty: (q.difficulty||'medium').toLowerCase(),
+    section: (q.section||'math').toLowerCase(),
+    imageUrl: q.image_url || q.imageUrl || null
+  };
+}
+async function fetchAPIQuestions(section, domain, difficulty, limit=20) {
+  try {
+    let url = `https://pinesat.com/api/questions?section=${section}&limit=${limit}`;
+    if (domain) url += `&domain=${encodeURIComponent(domain)}`;
+    if (difficulty) url += `&difficulty=${difficulty}`;
+    const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const arr = Array.isArray(data) ? data : (data.questions || data.data || []);
+    return arr.map(normalizeQuestion);
+  } catch(e) {
+    return null;
+  }
+}
+async function primeSessionCache() {
+  setLoadingText("Loading your question bank...");
+  try {
+    const [mathQ, engQ] = await Promise.all([
+      fetchAPIQuestions('math', null, null, 100),
+      fetchAPIQuestions('english', null, null, 100)
+    ]);
+    if (mathQ && mathQ.length > 0) sessionCache.math = mathQ;
+    if (engQ && engQ.length > 0) sessionCache.english = engQ;
+  } catch(e) {}
+  // Fill gaps with fallback
+  if (sessionCache.math.length < 10) {
+    sessionCache.math = FALLBACK_QUESTIONS.filter(q => q.section === 'math');
+  }
+  if (sessionCache.english.length < 10) {
+    sessionCache.english = FALLBACK_QUESTIONS.filter(q => q.section === 'english');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GROQ
+// ═══════════════════════════════════════════════════════════════
+async function groqExplainWrong(q, studentAnswerText) {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        max_tokens: 150,
+        temperature: 0.3,
+        messages:[
+          {role:'system',content:'You are a blunt SAT tutor. No greetings, no filler, no praise. Under 70 words. Plain English. Focus on the one rule or pattern the student must internalize to never miss this type again.'},
+          {role:'user',content:`SAT ${q.section} question, topic: ${q.topic}, difficulty: ${q.difficulty}.\nQuestion: ${stripLatex(q.text)}\nCorrect answer: ${q.choices[q.correct]}\nStudent picked: ${studentAnswerText}\nExplain exactly why they're wrong and what to remember. Under 70 words.`}
+        ]
+      }),
+      signal: AbortSignal.timeout(12000)
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch(e) { return null; }
+}
+async function groqPepTalk(stats) {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        max_tokens: 100,
+        temperature: 0.5,
+        messages:[
+          {role:'system',content:'You are a no-BS SAT coach. 2-3 sentences max. Direct. No corporate cheerleader energy. Speak to the student like a trusted older sibling.'},
+          {role:'user',content:`Student stats: ${stats.streak}-day streak. Weakest topic: ${stats.weakestTopic} at ${stats.weakestAcc}% accuracy. ${stats.daysLeft} days until SAT. Goal: ${stats.target} from ${stats.current}. Write today's pep talk.`}
+        ]
+      }),
+      signal: AbortSignal.timeout(12000)
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch(e) { return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DAILY PLAN
+// ═══════════════════════════════════════════════════════════════
+async function buildDailyPlan() {
+  const today = todayStr();
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('dailyPlan').doc(today).get();
+    if (snap.exists) {
+      dailyPlanData = snap.data();
+      return;
+    }
+  } catch(e) {}
+
+  topicStatsCache = await getTopicStats();
+  const reviewQs = await getDueReviewQuestions();
+
+  // Sort topics by weakness
+  const topicsSorted = ALL_DOMAINS.map(t => {
+    const s = topicStatsCache[t] || {attempts:0,correct:0};
+    const acc = s.attempts > 0 ? s.correct/s.attempts : 0;
+    return {topic:t, acc, attempts:s.attempts};
+  }).sort((a,b) => a.acc - b.acc);
+
+  const weakest = topicsSorted[0];
+  const secondWeak = topicsSorted[1];
+  const daysLeft = daysUntil(userProfile.testDate);
+
+  // Pep talk
+  let pepTalk = "You've got this. Every question you practice today is a point you're banking for test day. Start.";
+  try {
+    const groqTalk = await groqPepTalk({
+      streak: userProfile.streak||0,
+      weakestTopic: weakest.attempts > 0 ? weakest.topic : 'overall basics',
+      weakestAcc: weakest.attempts > 0 ? Math.round(weakest.acc*100) : 0,
+      daysLeft,
+      target: userProfile.targetScore||1340,
+      current: userProfile.currentScore||1040
+    });
+    if (groqTalk) pepTalk = groqTalk;
+  } catch(e) {}
+
+  const missionTitles = [
+    `${weakest.topic} Assault`,
+    `Review + ${weakest.topic} Grind`,
+    `Spaced Review + ${weakest.topic} Focus`,
+    `${weakest.topic} & ${secondWeak.topic} Blitz`
+  ];
+  const missionTitle = missionTitles[Math.floor(Math.random()*missionTitles.length)];
+
+  dailyPlanData = {
+    generatedAt: firebase.firestore.Timestamp.now(),
+    pepTalk,
+    missionTitle,
+    questionCount: 12,
+    weakTopics: [weakest.topic, secondWeak.topic],
+    reviewCount: reviewQs.length
+  };
+
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('dailyPlan').doc(today).set(dailyPlanData);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STREAK
+// ═══════════════════════════════════════════════════════════════
+async function updateStreak() {
+  const today = todayStr();
+  const lastActive = userProfile.lastActiveDate || '';
+  let streak = userProfile.streak || 0;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate()-1);
+  const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  if (lastActive === today) {
+    // already counted
+  } else if (lastActive === yStr) {
+    streak += 1;
+  } else if (lastActive && lastActive !== today) {
+    streak = 1;
+  } else {
+    streak = Math.max(1, streak);
+  }
+  userProfile.streak = streak;
+  userProfile.lastActiveDate = today;
+  await setUserDoc({streak, lastActiveDate: today});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD SESSION
+// ═══════════════════════════════════════════════════════════════
+async function buildSession() {
+  const reviewQs = await getDueReviewQuestions(); // up to 4
+  topicStatsCache = await getTopicStats();
+
+  const weakTopics = dailyPlanData.weakTopics || [ALL_DOMAINS[0], ALL_DOMAINS[1]];
+  let newQs = [];
+
+  for (const topic of weakTopics) {
+    const stat = topicStatsCache[topic] || {difficulty:'easy'};
+    const diff = stat.difficulty || 'easy';
+    const section = MATH_DOMAINS.includes(topic) ? 'math' : 'english';
+    const pool = (section === 'math' ? sessionCache.math : sessionCache.english)
+      .filter(q => q.topic === topic && q.difficulty === diff);
+    const fallbackPool = FALLBACK_QUESTIONS.filter(q => q.topic === topic);
+    const combined = pool.length >= 4 ? pool : [...pool, ...fallbackPool];
+    const shuffled = combined.sort(() => Math.random()-0.5);
+    newQs.push(...shuffled.slice(0, 4));
+  }
+
+  // Fill to 8 new questions if needed
+  if (newQs.length < 8) {
+    const used = new Set(newQs.map(q=>q.id));
+    const allPool = [...sessionCache.math, ...sessionCache.english, ...FALLBACK_QUESTIONS]
+      .filter(q => !used.has(q.id))
+      .sort(() => Math.random()-0.5);
+    newQs.push(...allPool.slice(0, 8 - newQs.length));
+  }
+
+  const allQs = [...reviewQs.slice(0,4), ...newQs.slice(0,8)];
+  return allQs.length > 0 ? allQs : FALLBACK_QUESTIONS.sort(() => Math.random()-0.5).slice(0,12);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER QUESTION
+// ═══════════════════════════════════════════════════════════════
+function renderQuestion(q, index, total, areaId, counterEls) {
+  answerLocked = false;
+  const area = document.getElementById(areaId);
+  area.innerHTML = '';
+
+  // Update header
+  if (counterEls.counter) counterEls.counter.textContent = `${index+1}/${total}`;
+  if (counterEls.topic) counterEls.topic.textContent = q.topic;
+  if (counterEls.diff) {
+    counterEls.diff.textContent = q.difficulty.charAt(0).toUpperCase()+q.difficulty.slice(1);
+    counterEls.diff.className = `diff-pill diff-${q.difficulty}`;
+  }
+  if (counterEls.progFill) {
+    counterEls.progFill.style.width = `${Math.round((index/total)*100)}%`;
+  }
+
+  // Question card
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  if (q.isReview) {
+    const badge = document.createElement('div');
+    badge.className = 'review-badge';
+    badge.textContent = '🔄 Spaced Review';
+    card.appendChild(badge);
+  }
+
+  const qText = document.createElement('div');
+  qText.className = 'question-text';
+  qText.textContent = q.text;
+  card.appendChild(qText);
+
+  if (q.imageUrl) {
+    const img = document.createElement('img');
+    img.src = q.imageUrl;
+    img.className = 'question-img';
+    img.alt = 'Question image';
+    card.appendChild(img);
+  }
+
+  area.appendChild(card);
+
+  // Choices
+  const choicesDiv = document.createElement('div');
+  choicesDiv.className = 'choices';
+  ['A','B','C','D'].forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.dataset.letter = letter;
+    const letterSpan = document.createElement('span');
+    letterSpan.className = 'choice-letter';
+    letterSpan.textContent = letter;
+    const textSpan = document.createElement('span');
+    textSpan.textContent = q.choices[letter] || '';
+    btn.appendChild(letterSpan);
+    btn.appendChild(textSpan);
+    btn.addEventListener('click', () => handleAnswer(q, letter, areaId, counterEls, index, total));
+    choicesDiv.appendChild(btn);
+  });
+  area.appendChild(choicesDiv);
+
+  // Explanation placeholder
+  const expCard = document.createElement('div');
+  expCard.className = 'explanation-card';
+  expCard.id = `exp-card-${areaId}`;
+  area.appendChild(expCard);
+
+  // Render math
+  renderMath(card);
+  renderMath(choicesDiv);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLE ANSWER
+// ═══════════════════════════════════════════════════════════════
+async function handleAnswer(q, chosenLetter, areaId, counterEls, index, total) {
+  if (answerLocked) return;
+  answerLocked = true;
+
+  const isCorrect = chosenLetter === q.correct;
+  const choicesDiv = document.querySelector(`#${areaId} .choices`);
+  const buttons = choicesDiv.querySelectorAll('.choice-btn');
+
+  buttons.forEach(btn => { btn.disabled = true; });
+
+  const chosenBtn = choicesDiv.querySelector(`[data-letter="${chosenLetter}"]`);
+  const correctBtn = choicesDiv.querySelector(`[data-letter="${q.correct}"]`);
+
+  if (isCorrect) {
+    chosenBtn.classList.add('correct-answer', 'flash-correct');
+  } else {
+    chosenBtn.classList.add('wrong-answer', 'flash-wrong');
+    correctBtn.classList.add('correct-answer');
+  }
+
+  // Track stats
+  const section = isDrillMode ? 'drill' : 'session';
+  if (!sessionTopicBreakdown[q.topic]) sessionTopicBreakdown[q.topic] = {attempted:0,correct:0};
+  sessionTopicBreakdown[q.topic].attempted++;
+  if (isCorrect) sessionTopicBreakdown[q.topic].correct++;
+
+  // Update Firestore topic stats
+  updateTopicStat(q.topic, isCorrect);
+
+  if (isCorrect) {
+    if (q.isReview) updateWrongAnswerReview(q.id, true);
+    // Auto-advance
+    setTimeout(() => advanceQuestion(areaId, counterEls, index, total, isCorrect, chosenLetter), 850);
+  } else {
+    // Save wrong answer
+    if (q.isReview) {
+      updateWrongAnswerReview(q.id, false);
+    } else {
+      saveWrongAnswer(q, chosenLetter);
+    }
+    // Show explanation
+    const expCard = document.getElementById(`exp-card-${areaId}`);
+    expCard.innerHTML = `<div class="explanation-label">❌ Why You're Wrong</div><div class="explanation-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div>Figuring out where you went wrong...</div>`;
+    expCard.classList.add('visible');
+
+    // Call Groq
+    const studentAnswerText = q.choices[chosenLetter] || chosenLetter;
+    const explanation = await groqExplainWrong(q, studentAnswerText);
+    const tip = TOPIC_TIPS[q.topic] || 'review the core rules for this topic type.';
+    const expText = explanation || `The correct answer is ${q.correct}: ${q.choices[q.correct]}. For ${q.topic} questions, always ${tip}`;
+
+    expCard.innerHTML = `<div class="explanation-label">❌ Why You're Wrong</div><div class="explanation-text" id="exp-text-${areaId}"></div>`;
+    document.getElementById(`exp-text-${areaId}`).textContent = expText;
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'next-btn';
+    nextBtn.textContent = 'Got it → Next';
+    nextBtn.addEventListener('click', () => advanceQuestion(areaId, counterEls, index, total, false, chosenLetter));
+    expCard.appendChild(nextBtn);
+  }
+
+  // Record result
+  const resultObj = {q, chosen: chosenLetter, correct: isCorrect};
+  if (isDrillMode) drillResults.push(resultObj);
+  else sessionResults.push(resultObj);
+
+  // Update global stats
+  userProfile.totalQuestionsAnswered = (userProfile.totalQuestionsAnswered||0)+1;
+  if (isCorrect) userProfile.totalCorrect = (userProfile.totalCorrect||0)+1;
+  setUserDoc({totalQuestionsAnswered: userProfile.totalQuestionsAnswered, totalCorrect: userProfile.totalCorrect});
+}
+
+function advanceQuestion(areaId, counterEls, index, total, wasCorrect, chosenLetter) {
+  const nextIndex = index + 1;
+  if (nextIndex >= total) {
+    // Session complete
+    if (isDrillMode) finishDrill();
+    else finishSession();
+  } else {
+    const pool = isDrillMode ? drillSession : currentSession;
+    renderQuestion(pool[nextIndex], nextIndex, total, areaId, counterEls);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION FINISH
+// ═══════════════════════════════════════════════════════════════
+async function finishSession() {
+  await updateStreak();
+
+  const correct = sessionResults.filter(r=>r.correct).length;
+  const total = sessionResults.length;
+
+  // Find weakest topic in session
+  let weakestTopic = '—';
+  let lowestAcc = 2;
+  for (const [topic, data] of Object.entries(sessionTopicBreakdown)) {
+    const acc = data.attempted > 0 ? data.correct/data.attempted : 0;
+    if (data.attempted > 0 && acc < lowestAcc) { lowestAcc = acc; weakestTopic = topic; }
+  }
+
+  const queueCount = await getWrongAnswerCount();
+  const tip = STRATEGY_TIPS[Math.floor(Math.random()*STRATEGY_TIPS.length)];
+  const pct = total > 0 ? Math.round((correct/total)*100) : 0;
+
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-total').textContent = total;
+  document.getElementById('res-label').textContent = `${pct}% correct`;
+  document.getElementById('res-weakest').textContent = weakestTopic;
+  document.getElementById('res-streak').textContent = `🔥 ${userProfile.streak||1} day${(userProfile.streak||1)!==1?'s':''}`;
+  document.getElementById('res-queue').textContent = `${queueCount} question${queueCount!==1?'s':''}`;
+  document.getElementById('strategy-tip-text').textContent = tip;
+
+  // Save session doc
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('sessions').add({
+      date: firebase.firestore.Timestamp.now(),
+      attempted: total,
+      correct,
+      topicBreakdown: sessionTopicBreakdown
+    });
+  } catch(e) {}
+
+  document.getElementById('results-overlay').classList.add('visible');
+}
+
+async function finishDrill() {
+  const correct = drillResults.filter(r=>r.correct).length;
+  const total = drillResults.length;
+  const pct = total > 0 ? Math.round((correct/total)*100) : 0;
+  const tip = STRATEGY_TIPS[Math.floor(Math.random()*STRATEGY_TIPS.length)];
+  const queueCount = await getWrongAnswerCount();
+
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-total').textContent = total;
+  document.getElementById('res-label').textContent = `${pct}% on ${drillTopic}`;
+  document.getElementById('res-weakest').textContent = drillTopic;
+  document.getElementById('res-streak').textContent = `${pct >= 75 ? '🟢' : pct >= 50 ? '🟡' : '🔴'} ${pct}% accuracy`;
+  document.getElementById('res-queue').textContent = `${queueCount} question${queueCount!==1?'s':''}`;
+  document.getElementById('strategy-tip-text').textContent = tip;
+  document.getElementById('results-overlay').classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME SCREEN RENDER
+// ═══════════════════════════════════════════════════════════════
+async function renderHome() {
+  showScreen('home-screen');
+
+  // User avatar
+  if (currentUser?.photoURL) {
+    const av = document.getElementById('user-avatar');
+    av.src = currentUser.photoURL;
+    av.style.display = 'block';
+  }
+  const firstName = currentUser?.displayName?.split(' ')[0] || '';
+  document.getElementById('user-name-display').textContent = firstName;
+
+  const daysLeft = daysUntil(userProfile.testDate);
+  document.getElementById('days-left').textContent = daysLeft;
+  document.getElementById('streak-count').textContent = userProfile.streak || 0;
+
+  const cur = userProfile.currentScore || 1040;
+  const tgt = userProfile.targetScore || 1340;
+  const maxPossible = 1600;
+  const progress = Math.min(100, Math.max(0, ((cur - 400)/(maxPossible-400))*100));
+  document.getElementById('score-from').textContent = cur;
+  document.getElementById('score-to').textContent = tgt;
+  document.getElementById('score-progress').style.width = progress + '%';
+
+  document.getElementById('mission-title').textContent = dailyPlanData.missionTitle || 'Today\'s Grind';
+  document.getElementById('mission-sub').textContent = `${dailyPlanData.questionCount || 12} questions · ~18 min`;
+  document.getElementById('pep-talk-text').textContent = dailyPlanData.pepTalk || "You've got this. Start.";
+
+  const totalQ = userProfile.totalQuestionsAnswered || 0;
+  const totalC = userProfile.totalCorrect || 0;
+  document.getElementById('stat-total-q').textContent = totalQ;
+  document.getElementById('stat-accuracy').textContent = totalQ > 0 ? `${Math.round((totalC/totalQ)*100)}%` : '—';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATS SCREEN
+// ═══════════════════════════════════════════════════════════════
+async function renderStats() {
+  showScreen('stats-screen');
+  topicStatsCache = await getTopicStats();
+
+  function renderGrid(topics, gridId) {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    topics.forEach(topic => {
+      const s = topicStatsCache[topic];
+      const tile = document.createElement('div');
+      tile.className = 'topic-tile';
+      if (!s || s.attempts === 0) {
+        tile.classList.add('no-data');
+        tile.innerHTML = `<div class="topic-acc">—</div><div class="topic-name">${topic}</div><div class="topic-tries">No attempts</div>`;
+      } else {
+        const acc = Math.round((s.correct/s.attempts)*100);
+        const color = acc >= 75 ? 'green' : acc >= 50 ? 'yellow' : 'red';
+        tile.classList.add(color);
+        tile.innerHTML = `<div class="topic-acc">${acc}%</div><div class="topic-name">${topic}</div><div class="topic-tries">${s.attempts} attempts · ${s.difficulty}</div>`;
+      }
+      tile.addEventListener('click', () => startDrill(topic));
+      grid.appendChild(tile);
+    });
+  }
+
+  renderGrid(MATH_DOMAINS, 'math-topic-grid');
+  renderGrid(ENGLISH_DOMAINS, 'english-topic-grid');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRILL MODE
+// ═══════════════════════════════════════════════════════════════
+async function startDrill(topic) {
+  isDrillMode = true;
+  drillTopic = topic;
+  drillResults = [];
+  sessionTopicBreakdown = {};
+
+  document.getElementById('drill-title').textContent = `Drilling: ${topic}`;
+  document.getElementById('drill-topic-label').textContent = topic;
+
+  topicStatsCache = await getTopicStats();
+  const stat = topicStatsCache[topic] || {difficulty:'easy'};
+  const diff = stat.difficulty || 'easy';
+  const section = MATH_DOMAINS.includes(topic) ? 'math' : 'english';
+
+  const pool = (section === 'math' ? sessionCache.math : sessionCache.english)
+    .filter(q => q.topic === topic);
+  const fallback = FALLBACK_QUESTIONS.filter(q => q.topic === topic);
+  const combined = [...pool, ...fallback].sort(() => Math.random()-0.5);
+  drillSession = combined.slice(0, 8);
+  if (drillSession.length === 0) drillSession = FALLBACK_QUESTIONS.filter(q=>q.section===section).slice(0,8);
+
+  showScreen('drill-screen');
+  document.getElementById('tab-bar').classList.remove('visible');
+
+  const counterEls = {
+    counter: document.getElementById('drill-q-counter'),
+    topic: document.getElementById('drill-topic-label'),
+    diff: document.getElementById('drill-diff-pill'),
+    progFill: document.getElementById('drill-prog-fill')
+  };
+
+  renderQuestion(drillSession[0], 0, drillSession.length, 'drill-question-area', counterEls);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETUP SCREEN
+// ═══════════════════════════════════════════════════════════════
+function showSetup() {
+  showScreen('setup-screen');
+  document.getElementById('tab-bar').classList.remove('visible');
+  // Set default date 14 days from now
+  const d = new Date();
+  d.setDate(d.getDate()+14);
+  document.getElementById('setup-date').value = d.toISOString().split('T')[0];
+}
+
+async function handleSetupSubmit() {
+  const cur = parseInt(document.getElementById('setup-current').value) || 1040;
+  const tgt = parseInt(document.getElementById('setup-target').value) || 1340;
+  const dateVal = document.getElementById('setup-date').value;
+  const errEl = document.getElementById('setup-error');
+  errEl.style.display = 'none';
+
+  if (!dateVal) {
+    errEl.textContent = 'Please select your test date.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('setup-submit-btn').textContent = 'Setting up...';
+  document.getElementById('setup-submit-btn').disabled = true;
+
+  userProfile = {
+    currentScore: cur,
+    targetScore: tgt,
+    testDate: dateVal,
+    streak: 0,
+    totalQuestionsAnswered: 0,
+    totalCorrect: 0
+  };
+  localStorage.setItem('sat_setup_done', '1');
+  localStorage.setItem('sat_profile', JSON.stringify(userProfile));
+
+  await setUserDoc({
+    currentScore: cur,
+    targetScore: tgt,
+    testDate: dateVal,
+    streak: 0,
+    totalQuestionsAnswered: 0,
+    totalCorrect: 0,
+    createdAt: firebase.firestore.Timestamp.now()
+  });
+
+  document.getElementById('setup-submit-btn').textContent = '⚡ Start My Journey';
+  document.getElementById('setup-submit-btn').disabled = false;
+
+  await launchApp();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN LAUNCH FLOW
+// ═══════════════════════════════════════════════════════════════
+async function launchApp() {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  setLoadingText('Loading your data...');
+
+  // Load user profile from Firestore
+  const doc = await getUserDoc();
+  if (doc) {
+    userProfile = {
+      currentScore: doc.currentScore || 1040,
+      targetScore: doc.targetScore || 1340,
+      testDate: doc.testDate || '',
+      streak: doc.streak || 0,
+      lastActiveDate: doc.lastActiveDate || '',
+      totalQuestionsAnswered: doc.totalQuestionsAnswered || 0,
+      totalCorrect: doc.totalCorrect || 0
+    };
+  }
+
+  // Check if setup needed
+  const setupDone = localStorage.getItem('sat_setup_done');
+  if (!doc || !doc.currentScore) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showSetup();
+    return;
+  }
+
+  await primeSessionCache();
+  setLoadingText('Building your battle plan...');
+  await buildDailyPlan();
+
+  document.getElementById('loading-overlay').classList.add('hidden');
+  await renderHome();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE AUTH FLOW
+// ═══════════════════════════════════════════════════════════════
+function showGoogleSignIn() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  showScreen('google-signin-screen');
+}
+
+async function handleGoogleSignIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    document.getElementById('signin-error').style.display = 'none';
+    document.getElementById('google-signin-btn').textContent = 'Signing in...';
+    document.getElementById('google-signin-btn').disabled = true;
+    await auth.signInWithPopup(provider);
+    // onAuthStateChanged will handle rest
+  } catch(e) {
+    document.getElementById('google-signin-btn').innerHTML = `
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google`;
+    document.getElementById('google-signin-btn').disabled = false;
+    const errEl = document.getElementById('signin-error');
+    errEl.textContent = e.message || 'Sign in failed. Try again.';
+    errEl.style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENTRY POINT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!initFirebase()) {
+    document.getElementById('loading-sub-text').textContent = 'Firebase failed to load.';
+    return;
+  }
+
+  // Google sign-in button
+  document.getElementById('google-signin-btn').addEventListener('click', handleGoogleSignIn);
+
+  // Setup submit
+  document.getElementById('setup-submit-btn').addEventListener('click', handleSetupSubmit);
+
+  // Tab bar
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      if (tab === 'home') { isDrillMode = false; renderHome(); }
+      else if (tab === 'stats') { isDrillMode = false; renderStats(); }
+      else if (tab === 'drill') {
+        // Open stats to pick a topic
+        isDrillMode = false;
+        renderStats();
+        showToast('Tap a topic tile to drill it!');
+      }
+    });
+  });
+
+  // Start session button
+  document.getElementById('start-session-btn').addEventListener('click', async () => {
+    isDrillMode = false;
+    sessionResults = [];
+    sessionTopicBreakdown = {};
+    currentQuestionIndex = 0;
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    setLoadingText('Loading your session...');
+    currentSession = await buildSession();
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showScreen('practice-screen');
+    document.getElementById('tab-bar').classList.remove('visible');
+    const counterEls = {
+      counter: document.getElementById('q-counter'),
+      topic: document.getElementById('session-topic-label'),
+      diff: document.getElementById('diff-pill'),
+      progFill: document.getElementById('session-prog-fill')
+    };
+    renderQuestion(currentSession[0], 0, currentSession.length, 'question-area', counterEls);
+  });
+
+  // Results → Home
+  document.getElementById('res-home-btn').addEventListener('click', async () => {
+    document.getElementById('results-overlay').classList.remove('visible');
+    isDrillMode = false;
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    setLoadingText('Refreshing...');
+    topicStatsCache = await getTopicStats();
+    // Rebuild daily plan in case it needs update
+    await buildDailyPlan();
+    document.getElementById('loading-overlay').classList.add('hidden');
+    await renderHome();
+  });
+
+  // Drill back
+  document.getElementById('drill-back-btn').addEventListener('click', () => {
+    isDrillMode = false;
+    document.getElementById('results-overlay').classList.remove('visible');
+    renderStats();
+  });
+
+  // Auth state listener
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      await launchApp();
+    } else {
+      showGoogleSignIn();
+    }
+  });
+});
 </script>
 </body>
 </html>
