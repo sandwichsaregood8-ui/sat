@@ -1208,13 +1208,11 @@ async function fetchAPIQuestions(section, domain, difficulty, limit=20) {
     let apiUrl = `https://pinesat.com/api/questions?section=${section}&limit=${limit}`;
     if (domain) apiUrl += `&domain=${encodeURIComponent(domain)}`;
     if (difficulty) apiUrl += `&difficulty=${difficulty}`;
-    let url = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
-    const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
-    if (!res.ok) throw new Error('API error');
+    let url = `https://cors-anywhere.herokuapp.com/${apiUrl}`;
+    const res = await fetch(url, {signal: AbortSignal.timeout(15000)});
+    if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
-    // Parse the proxy response
-    const actualData = JSON.parse(data.contents);
-    const arr = Array.isArray(actualData) ? actualData : (actualData.questions || actualData.data || []);
+    const arr = Array.isArray(data) ? data : (data.questions || data.data || []);
     return arr.map(normalizeQuestion);
   } catch(e) {
     console.error('API fetch error:', e);
